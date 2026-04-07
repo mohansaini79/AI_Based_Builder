@@ -1,0 +1,382 @@
+/* ============================================================
+   ResumeAI – Global Styles
+   ============================================================ */
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* Selection */
+::selection { background: rgba(91, 110, 247, 0.35); color: #e0eaff; }
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid #5b6ef7;
+  outline-offset: 2px;
+}
+
+/* ── Glassmorphism Cards ───────────────────────────────────── */
+.glass-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 1rem;
+}
+
+.glass-card-hover {
+  transition: all 0.3s ease;
+}
+.glass-card-hover:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(91, 110, 247, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(91,110,247,0.15);
+}
+
+/* ── Gradient Text ────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-brand {
+  background: linear-gradient(135deg, #5b6ef7, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: linear-gradient(135deg, #5b6ef7, #7c3aed);
+  color: #fff;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.25s ease;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transition: left 0.4s ease;
+}
+.btn-primary:hover::before { left: 100%; }
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(91,110,247,0.4);
+}
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: rgba(255,255,255,0.05);
+  color: #e2e8f0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 0.75rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: rgba(239,68,68,0.15);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 0.6rem;
+  font-size: 0.825rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.btn-danger:hover {
+  background: rgba(239,68,68,0.25);
+  border-color: rgba(239,68,68,0.5);
+}
+
+/* ── Form Inputs ──────────────────────────────────────────── */
+.form-input {
+  width: 100%;
+  padding: 0.6rem 0.875rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 0.625rem;
+  color: #f1f5f9;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  outline: none;
+}
+.form-input::placeholder { color: #64748b; }
+.form-input:focus {
+  border-color: #5b6ef7;
+  background: rgba(91,110,247,0.07);
+  box-shadow: 0 0 0 3px rgba(91,110,247,0.12);
+}
+
+.form-label {
+  display: block;
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-bottom: 0.35rem;
+}
+
+/* ── Navbar ───────────────────────────────────────────────── */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(9,11,17,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.sidebar {
+  background: rgba(9,11,17,0.95);
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.6rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.sidebar-link:hover {
+  background: rgba(255,255,255,0.06);
+  color: #e2e8f0;
+}
+.sidebar-link.active {
+  background: rgba(91,110,247,0.15);
+  color: #818cf8;
+  border: 1px solid rgba(91,110,247,0.25);
+}
+
+/* ── ATS Score Ring ───────────────────────────────────────── */
+.score-ring-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+.score-ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Skill Chips ──────────────────────────────────────────── */
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(91,110,247,0.12);
+  border: 1px solid rgba(91,110,247,0.25);
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #a5b4fc;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.skill-chip:hover {
+  background: rgba(91,110,247,0.22);
+  border-color: rgba(91,110,247,0.45);
+  transform: scale(1.04);
+}
+.skill-chip.added {
+  background: rgba(16,185,129,0.12);
+  border-color: rgba(16,185,129,0.3);
+  color: #6ee7b7;
+}
+
+/* ── Progress Bar ─────────────────────────────────────────── */
+.progress-bar-track {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 1s ease;
+  background: linear-gradient(90deg, #5b6ef7, #7c3aed);
+}
+
+/* ── Builder Tabs ─────────────────────────────────────────── */
+.builder-tab {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.builder-tab:hover { color: #94a3b8; background: rgba(255,255,255,0.04); }
+.builder-tab.active {
+  color: #818cf8;
+  background: rgba(91,110,247,0.12);
+  border-color: rgba(91,110,247,0.25);
+}
+
+/* ── Section Panels ───────────────────────────────────────── */
+.section-panel { display: none; }
+.section-panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Repeatable Entry Cards ───────────────────────────────── */
+.entry-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  position: relative;
+}
+
+/* ── Template Selector ────────────────────────────────────── */
+.template-card {
+  border: 2px solid rgba(255,255,255,0.08);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.template-card:hover { border-color: rgba(91,110,247,0.4); transform: translateY(-2px); }
+.template-card.selected { border-color: #5b6ef7; box-shadow: 0 0 0 4px rgba(91,110,247,0.15); }
+
+/* ── Upload Drop Zone ─────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed rgba(91,110,247,0.35);
+  border-radius: 1.25rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  transition: all 0.3s;
+  cursor: pointer;
+  background: rgba(91,110,247,0.04);
+}
+.drop-zone.drag-over {
+  border-color: #5b6ef7;
+  background: rgba(91,110,247,0.1);
+  transform: scale(1.01);
+}
+
+/* ── Tooltip ──────────────────────────────────────────────── */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.4rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 50;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+[data-tooltip]:hover::after { opacity: 1; }
+
+/* ── Spinner ──────────────────────────────────────────────── */
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #5b6ef7;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Landing Hero BG ──────────────────────────────────────── */
+.hero-gradient {
+  background: 
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(91,110,247,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(124,58,237,0.1) 0%, transparent 60%),
+    #030712;
+}
+
+.glow-dot {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .builder-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Quill Overrides ──────────────────────────────────────── */
+.ql-toolbar {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+.ql-container {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  border-radius: 0 0 0.5rem 0.5rem !important;
+  color: #e2e8f0 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.875rem !important;
+  min-height: 120px;
+}
+.ql-toolbar .ql-stroke { stroke: #94a3b8 !important; }
+.ql-toolbar .ql-fill { fill: #94a3b8 !important; }
+.ql-toolbar button:hover .ql-stroke { stroke: #c4d4ff !important; }
+.ql-editor.ql-blank::before { color: #475569 !important; }

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Sign In – ResumeAI{% endblock %}
+
+{% block body %}
+<div class="min-h-screen hero-gradient flex items-center justify-center px-4 py-12">
+  <!-- Glow orbs -->
+  <div class="glow-dot w-72 h-72 bg-indigo-600/20 top-10 left-10 fixed"></div>
+  <div class="glow-dot w-60 h-60 bg-purple-600/15 bottom-10 right-10 fixed"></div>
+
+  <div class="w-full max-w-md relative z-10 animate-slide-up">
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2 font-bold text-2xl">
+        <span class="text-3xl">⚡</span>
+        <span class="gradient-text-brand">ResumeAI</span>
+      </a>
+      <h1 class="text-2xl font-bold mt-6 mb-1 text-white">Welcome back</h1>
+      <p class="text-gray-400 text-sm">Sign in to continue building</p>
+    </div>
+
+    <!-- Card -->
+    <div class="glass-card p-8">
+      <!-- Google OAuth -->
+      <a href="/auth/google" id="google-login-btn"
+         class="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-200 font-medium text-sm text-gray-200 mb-6">
+        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </a>
+
+      <div class="flex items-center gap-3 mb-6">
+        <div class="flex-1 h-px bg-white/8"></div>
+        <span class="text-gray-500 text-xs uppercase tracking-widest">or</span>
+        <div class="flex-1 h-px bg-white/8"></div>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" method="POST" action="/login" class="space-y-4">
+        <div>
+          <label class="form-label" for="email">Email address</label>
+          <input id="email" name="email" type="email" required autocomplete="email"
+                 class="form-input" placeholder="you@example.com" />
+        </div>
+        <div>
+          <label class="form-label" for="password">Password</label>
+          <div class="relative">
+            <input id="password" name="password" type="password" required autocomplete="current-password"
+                   class="form-input pr-10" placeholder="••••••••" />
+            <button type="button" id="toggle-password"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-sm"
+                    aria-label="Toggle password visibility">👁</button>
+          </div>
+        </div>
+
+        <button id="login-submit-btn" type="submit" class="btn-primary w-full py-3 mt-2">
+          Sign In
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-gray-500 text-sm mt-6">
+      Don't have an account?
+      <a href="/register" class="text-indigo-400 hover:text-indigo-300 font-medium ml-1">Create one free →</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.getElementById('toggle-password').addEventListener('click', function() {
+    const pwd = document.getElementById('password');
+    pwd.type = pwd.type === 'password' ? 'text' : 'password';
+  });
+  document.getElementById('login-form').addEventListener('submit', function() {
+    const btn = document.getElementById('login-submit-btn');
+    btn.innerHTML = '<div class="spinner"></div> Signing in...';
+    btn.disabled = true;
+  });
+</script>
+{% endblock %}

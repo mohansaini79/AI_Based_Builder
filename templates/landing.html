@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI – Build Smarter Resumes with AI{% endblock %}
+{% block meta_description %}Create ATS-optimized resumes with AI suggestions, multiple beautiful templates, and one-click PDF export.{% endblock %}
+
+{% block body %}
+<!-- ── Navbar ── -->
+<nav class="navbar">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+    <a href="/" class="flex items-center gap-2 font-bold text-xl">
+      <span class="text-3xl">⚡</span>
+      <span class="gradient-text-brand">ResumeAI</span>
+    </a>
+    <div class="flex items-center gap-3">
+      <a href="/login" class="btn-secondary text-sm px-4 py-2">Sign In</a>
+      <a href="/register" class="btn-primary text-sm px-4 py-2">Get Started Free</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero-gradient relative overflow-hidden min-h-[calc(100vh-64px)] flex items-center">
+  <!-- Glow orbs -->
+  <div class="glow-dot w-96 h-96 bg-indigo-600/20 top-20 -left-20"></div>
+  <div class="glow-dot w-80 h-80 bg-purple-600/15 bottom-20 right-10"></div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
+    <div class="text-center max-w-4xl mx-auto">
+      <!-- Badge -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/25 rounded-full text-sm text-indigo-300 font-medium mb-8 animate-fade-in">
+        <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse-slow"></span>
+        Powered by Llama 3.3 · 70B
+      </div>
+
+      <h1 class="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight mb-6 animate-slide-up">
+        Build Resumes That<br />
+        <span class="gradient-text">Actually Get Hired</span>
+      </h1>
+      <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed animate-slide-up">
+        AI-powered resume builder with real-time ATS scoring, intelligent suggestions,
+        and beautiful company-style templates. Go from draft to interview-ready in minutes.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up">
+        <a href="/register" class="btn-primary text-base px-8 py-3.5">
+          🚀 Build My Resume – It's Free
+        </a>
+        <a href="/login" class="btn-secondary text-base px-8 py-3.5">
+          Sign In to Dashboard →
+        </a>
+      </div>
+
+      <!-- Stats -->
+      <div class="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
+        <div class="text-center">
+          <div class="text-3xl font-black gradient-text-brand">4</div>
+          <div class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">Templates</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-black gradient-text-brand">AI</div>
+          <div class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">Powered</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-black gradient-text-brand">ATS</div>
+          <div class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">Optimized</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ── -->
+<section class="py-24 bg-gray-950 relative">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold mb-4">Everything You Need to Land the Job</h2>
+      <p class="text-gray-400 text-lg">Professional tools, powered by cutting-edge AI</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Feature cards -->
+      {% set features = [
+        ("🤖", "AI Section Rewrite", "Rewrite any section — summary, skills, experience, or projects — with one click using Llama 3.3."),
+        ("📊", "ATS Scoring", "Domain-specific ATS analysis with keyword matching, gap detection, and real-time score updates."),
+        ("📄", "Resume Parsing", "Upload existing PDF or DOCX and auto-fill the builder instantly using AI extraction."),
+        ("🎨", "4 Pro Templates", "Google, Microsoft, Meta, and Oracle-inspired templates with pixel-perfect A4 PDF export."),
+        ("💡", "Smart Suggestions", "Get missing skill recommendations and actionable improvement suggestions tailored to your domain."),
+        ("🔒", "Secure & Private", "OAuth2 + bcrypt auth. Your data is always encrypted and only accessible by you."),
+      ] %}
+      {% for icon, title, desc in features %}
+      <div class="glass-card glass-card-hover p-6">
+        <div class="text-4xl mb-4">{{ icon }}</div>
+        <h3 class="text-lg font-semibold mb-2 text-white">{{ title }}</h3>
+        <p class="text-gray-400 text-sm leading-relaxed">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ── Templates showcase ── -->
+<section class="py-24 bg-gray-900/50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold mb-4">Company-Inspired Templates</h2>
+      <p class="text-gray-400 text-lg">Styled after the world's top tech companies</p>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      {% for name, color, emoji in [("Google", "from-blue-600 to-green-500", "🔵"), ("Microsoft", "from-blue-500 to-cyan-400", "🪟"), ("Meta", "from-blue-600 to-indigo-600", "🔷"), ("Oracle", "from-red-600 to-orange-500", "🔴")] %}
+      <div class="glass-card overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300">
+        <div class="h-32 bg-gradient-to-br {{ color }} flex items-center justify-center text-5xl">{{ emoji }}</div>
+        <div class="p-4">
+          <div class="font-semibold text-white text-sm">{{ name }} Style</div>
+          <div class="text-gray-400 text-xs mt-1">Clean · ATS-Ready</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="py-24 bg-gray-950">
+  <div class="max-w-3xl mx-auto px-4 text-center">
+    <h2 class="text-4xl font-bold mb-6">Ready to Build Your Dream Resume?</h2>
+    <p class="text-gray-400 mb-10 text-lg">Join thousands of job seekers getting hired with AI-powered resumes.</p>
+    <a href="/register" class="btn-primary text-lg px-10 py-4">
+      ⚡ Get Started for Free
+    </a>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer class="border-t border-white/5 py-8 text-center text-gray-600 text-sm">
+  <div class="max-w-7xl mx-auto px-4">
+    <p class="flex items-center justify-center gap-2">
+      <span class="text-xl">⚡</span>
+      <strong class="text-gray-400">ResumeAI</strong> · Built with Flask + Groq AI · © {{ 2025 }}
+    </p>
+  </div>
+</footer>
+{% endblock %}

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="{% block meta_description %}AI-powered resume builder with ATS scoring, smart suggestions, and beautiful templates.{% endblock %}" />
+  <title>{% block title %}ResumeAI – Build Smarter Resumes{% endblock %}</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#f0f4ff',
+              100: '#e0eaff',
+              200: '#c4d4ff',
+              300: '#a3b8ff',
+              400: '#7b93ff',
+              500: '#5b6ef7',
+              600: '#4650e8',
+              700: '#3840cc',
+              800: '#2d34a5',
+              900: '#1e2370',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.4s ease-out',
+            'slide-up': 'slideUp 0.5s ease-out',
+            'pulse-slow': 'pulse 3s infinite',
+          },
+          keyframes: {
+            fadeIn: { from: { opacity: '0' }, to: { opacity: '1' } },
+            slideUp: { from: { opacity: '0', transform: 'translateY(20px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-950 text-gray-100 font-sans antialiased">
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div id="flash-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+        {% for category, message in messages %}
+          <div class="flash-msg flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border animate-fade-in
+            {% if category == 'error' %}bg-red-900/90 border-red-700 text-red-100
+            {% elif category == 'success' %}bg-emerald-900/90 border-emerald-700 text-emerald-100
+            {% else %}bg-blue-900/90 border-blue-700 text-blue-100{% endif %}">
+            <span class="text-lg">
+              {% if category == 'error' %}⚠️{% elif category == 'success' %}✅{% else %}ℹ️{% endif %}
+            </span>
+            <span class="text-sm font-medium">{{ message }}</span>
+            <button onclick="this.parentElement.remove()" class="ml-auto opacity-60 hover:opacity-100 text-lg">×</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block body %}{% endblock %}
+
+  <!-- Auto-dismiss flash messages -->
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('.flash-msg').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.5s';
+        setTimeout(() => el.remove(), 500);
+      });
+    }, 4000);
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

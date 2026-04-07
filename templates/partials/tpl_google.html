@@ -1,0 +1,79 @@
+<!-- Google Template Partial -->
+{% set r = resume %}
+<div class="g-header avoid-break">
+  <div class="g-name">{{ r.full_name or 'Your Name' }}</div>
+  <div class="g-contact">
+    {% if r.email %}<span>✉ {{ r.email }}</span>{% endif %}
+    {% if r.phone %}<span>📞 {{ r.phone }}</span>{% endif %}
+    {% if r.location %}<span>📍 {{ r.location }}</span>{% endif %}
+    {% if r.linkedin %}<a href="{{ r.linkedin }}" target="_blank">🔗 LinkedIn</a>{% endif %}
+    {% if r.github %}<a href="{{ r.github }}" target="_blank">💻 GitHub</a>{% endif %}
+    {% if r.website %}<a href="{{ r.website }}" target="_blank">🌐 Website</a>{% endif %}
+  </div>
+</div>
+
+<div class="g-body">
+  <!-- Main column -->
+  <div class="g-main">
+    {% if r.summary %}
+    <div class="avoid-break">
+      <div class="g-section-title">Professional Summary</div>
+      <p class="g-summary">{{ r.summary | striptags }}</p>
+    </div>
+    {% endif %}
+
+    {% if r.experience %}
+    <div class="g-section-title">Work Experience</div>
+    {% for exp in r.experience %}
+    <div class="g-entry avoid-break">
+      <div class="g-entry-title">{{ exp.title or '' }}</div>
+      <div class="g-entry-sub">{{ exp.company or '' }}</div>
+      <div class="g-entry-meta">
+        {% if exp.duration %}{{ exp.duration }}{% endif %}
+        {% if exp.location %} · {{ exp.location }}{% endif %}
+      </div>
+      {% if exp.description %}<div class="g-entry-desc">{{ exp.description | striptags }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if r.projects %}
+    <div class="g-section-title">Projects</div>
+    {% for proj in r.projects %}
+    <div class="g-entry avoid-break">
+      <div class="g-entry-title">{{ proj.title or '' }}
+        {% if proj.link %}<a href="{{ proj.link }}" style="font-size:10px;color:#1a73e8;font-weight:400;margin-left:6px;">↗ Link</a>{% endif %}
+      </div>
+      {% if proj.technologies %}<div class="g-entry-sub">{{ proj.technologies }}</div>{% endif %}
+      {% if proj.description %}<div class="g-entry-desc">{{ proj.description | striptags }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Side column -->
+  <div class="g-side">
+    {% if r.skills %}
+    <div class="g-section-title" style="margin-top:0;">Skills</div>
+    <div>{% for s in r.skills %}<span class="g-skill-tag">{{ s }}</span>{% endfor %}</div>
+    {% endif %}
+
+    {% if r.education %}
+    <div class="g-section-title">Education</div>
+    {% for edu in r.education %}
+    <div class="g-entry avoid-break">
+      <div class="g-entry-title">{{ edu.degree or '' }}</div>
+      <div class="g-entry-sub">{{ edu.institution or '' }}</div>
+      <div class="g-entry-meta">{{ edu.year or '' }}{% if edu.gpa %} · GPA: {{ edu.gpa }}{% endif %}</div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if r.certifications %}
+    <div class="g-section-title">Certifications</div>
+    {% for cert in r.certifications %}
+    <div class="g-cert">{{ cert }}</div>
+    {% endfor %}
+    {% endif %}
+  </div>
+</div>

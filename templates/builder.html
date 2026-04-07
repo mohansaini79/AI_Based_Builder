@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}{% if resume %}Edit Resume{% else %}New Resume{% endif %} – ResumeAI{% endblock %}
+
+{% block extra_head %}
+<!-- Quill Editor -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<!-- html2pdf -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
+{% block body %}
+<!-- Pass resume data to JS (JSON data islands — avoids linter false-positives on Jinja2 syntax) -->
+<script type="application/json" id="__resume_id__">{{ resume_id | tojson if resume_id else 'null' }}</script>
+<script type="application/json" id="__resume_data__">{{ resume | tojson if resume else '{}' }}</script>
+<script>
+  window.RESUME_ID   = JSON.parse(document.getElementById('__resume_id__').textContent);
+  window.RESUME_DATA = JSON.parse(document.getElementById('__resume_data__').textContent);
+</script>
+
+<div class="flex h-screen overflow-hidden bg-gray-950">
+
+  <!-- ── Left Sidebar ── -->
+  <aside class="sidebar w-52 flex-shrink-0 flex flex-col py-5 px-3 overflow-y-auto">
+    <a href="/dashboard" class="flex items-center gap-2 font-bold text-base px-2 mb-6">
+      <span class="text-xl">⚡</span><span class="gradient-text-brand">ResumeAI</span>
+    </a>
+    <nav class="flex flex-col gap-1 text-sm">
+      <a href="/dashboard"  class="sidebar-link">📊 Dashboard</a>
+      <a href="/resume/new" class="sidebar-link active">✏️ Builder</a>
+      <a href="/upload"     class="sidebar-link">📤 Upload</a>
+    </nav>
+    <!-- Section jump nav -->
+    <div class="mt-8 px-2">
+      <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Sections</p>
+      <div id="section-nav" class="flex flex-col gap-1">
+        {% for sec, icon in [('basics','👤'),('summary','✍️'),('skills','🛠'),('experience','💼'),('education','🎓'),('projects','🚀'),('certifications','🏅')] %}
+        <button onclick="switchTab('{{ sec }}')"
+                id="nav-{{ sec }}" class="builder-tab text-left" data-section="{{ sec }}">
+          {{ icon }} {{ sec|title }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="mt-auto pt-4 border-t border-white/5 space-y-2">
+      <a href="/logout" class="sidebar-link text-xs text-gray-600 hover:text-red-400">🚪 Sign Out</a>
+    </div>
+  </aside>
+
+  <!-- ── Center: Form ── -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <!-- Toolbar -->
+    <div class="sticky top-0 z-30 bg-gray-950/90 backdrop-blur border-b border-white/5 px-5 py-3 flex items-center gap-3 flex-wrap">
+      <div class="flex-1 min-w-0">
+        <input id="resume-title" type="text" class="form-input text-sm max-w-xs"
+               placeholder="Resume Title" value="{{ resume.title if resume else 'Untitled Resume' }}" />
+      </div>
+      <!-- Template selector -->
+      <div class="flex gap-1.5">
+        {% for tpl, emoji in [('google','🔵'),('microsoft','🪟'),('meta','🔷'),('oracle','🔴')] %}
+        <button id="tpl-{{ tpl }}" onclick="selectTemplate('{{ tpl }}')"
+                class="template-card px-3 py-1.5 text-xs font-semibold flex items-center gap-1 {% if (resume and resume.template == tpl) or (not resume and tpl=='google') %}selected{% endif %}"
+                title="{{ tpl|title }} Template">
+          <span>{{ emoji }}</span><span class="hidden sm:inline">{{ tpl|title }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      <div class="flex gap-2">
+        <button id="save-btn"    onclick="saveResume()"    class="btn-primary text-xs px-4 py-2">💾 Save</button>
+        <button id="ai-score-btn" onclick="runATSScore()"  class="btn-secondary text-xs px-4 py-2">📊 ATS Score</button>
+        <button id="export-pdf-btn" onclick="exportPDF()"  class="btn-secondary text-xs px-4 py-2">⬇ PDF</button>
+      </div>
+    </div>
+
+    <!-- Form Tabs & Content -->
+    <div class="flex-1 overflow-y-auto px-5 py-5">
+
+      <!-- ── BASICS ── -->
+      <div id="tab-basics" class="section-panel active">
+        <h2 class="text-lg font-bold mb-4 text-white">👤 Personal Info</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2 sm:col-span-1">
+            <label class="form-label">Full Name *</label>
+            <input id="f-full_name" class="form-input" type="text" placeholder="Jane Smith" />
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <label class="form-label">Email *</label>
+            <input id="f-email" class="form-input" type="email" placeholder="jane@example.com" />
+          </div>
+          <div>
+            <label class="form-label">Phone</label>
+            <input id="f-phone" class="form-input" type="tel" placeholder="+1 (555) 000-0000" />
+          </div>
+          <div>
+            <label class="form-label">Location</label>
+            <input id="f-location" class="form-input" type="text" placeholder="San Francisco, CA" />
+          </div>
+          <div>
+            <label class="form-label">LinkedIn URL</label>
+            <input id="f-linkedin" class="form-input" type="url" placeholder="linkedin.com/in/..." />
+          </div>
+          <div>
+            <label class="form-label">GitHub URL</label>
+            <input id="f-github" class="form-input" type="url" placeholder="github.com/..." />
+          </div>
+          <div class="col-span-2">
+            <label class="form-label">Personal Website</label>
+            <input id="f-website" class="form-input" type="url" placeholder="https://yoursite.com" />
+          </div>
+        </div>
+        <div class="mt-6">
+          <label class="form-label">ATS Domain</label>
+          <select id="f-ats_domain" class="form-input">
+            {% for d in ['Software Engineering','Data Science','Product Management','Marketing','Finance','Healthcare','Design','DevOps'] %}
+            <option value="{{ d }}" {% if resume and resume.ats_domain == d %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- ── SUMMARY ── -->
+      <div id="tab-summary" class="section-panel">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">✍️ Professional Summary</h2>
+          <button onclick="rewriteSection('summary')" class="btn-secondary text-xs px-3 py-1.5">🤖 AI Rewrite</button>
+        </div>
+        <div id="editor-summary" style="min-height:160px;"></div>
+      </div>
+
+      <!-- ── SKILLS ── -->
+      <div id="tab-skills" class="section-panel">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">🛠 Skills</h2>
+          <button onclick="rewriteSection('skills')" class="btn-secondary text-xs px-3 py-1.5">🤖 AI Suggest</button>
+        </div>
+        <div class="glass-card p-4 mb-4">
+          <div class="flex gap-2 mb-3">
+            <input id="skill-input" class="form-input flex-1" type="text" placeholder="e.g. Python, React, Docker..." />
+            <button onclick="addSkillTag()" class="btn-primary px-4 py-2 text-sm">Add</button>
+          </div>
+          <div id="skills-container" class="flex flex-wrap gap-2 min-h-[40px]">
+            <!-- skill chips injected here -->
+          </div>
+        </div>
+        <!-- AI suggestions panel -->
+        <div id="skill-suggestions-panel" class="glass-card p-4 hidden">
+          <p class="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-3">💡 Suggested Skills to Add</p>
+          <div id="suggested-skills" class="flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+
+      <!-- ── EXPERIENCE ── -->
+      <div id="tab-experience" class="section-panel">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">💼 Work Experience</h2>
+          <button onclick="addExperience()" class="btn-primary text-xs px-4 py-2">+ Add Entry</button>
+        </div>
+        <div id="experience-list"></div>
+      </div>
+
+      <!-- ── EDUCATION ── -->
+      <div id="tab-education" class="section-panel">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">🎓 Education</h2>
+          <button onclick="addEducation()" class="btn-primary text-xs px-4 py-2">+ Add Entry</button>
+        </div>
+        <div id="education-list"></div>
+      </div>
+
+      <!-- ── PROJECTS ── -->
+      <div id="tab-projects" class="section-panel">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">🚀 Projects</h2>
+          <button onclick="addProject()" class="btn-primary text-xs px-4 py-2">+ Add Project</button>
+        </div>
+        <div id="projects-list"></div>
+      </div>
+
+      <!-- ── CERTIFICATIONS ── -->
+      <div id="tab-certifications" class="section-panel">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">🏅 Certifications</h2>
+          <button onclick="addCertification()" class="btn-primary text-xs px-4 py-2">+ Add</button>
+        </div>
+        <div id="certifications-list"></div>
+      </div>
+
+    </div><!-- /form scroll -->
+  </div>
+
+  <!-- ── Right Panel: Preview + ATS ── -->
+  <aside class="w-80 xl:w-96 flex-shrink-0 flex flex-col border-l border-white/5 overflow-y-auto bg-gray-900/30">
+    <div class="p-4 border-b border-white/5">
+      <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-widest">Live Preview</h3>
+    </div>
+
+    <!-- Mini preview -->
+    <div class="p-3 flex-shrink-0">
+      <div id="mini-preview" class="bg-white rounded-lg overflow-hidden shadow-xl" style="transform:scale(0.55);transform-origin:top left;width:182%;height:380px;pointer-events:none;overflow:hidden;">
+        <div id="resume-preview-inner" class="p-6 text-gray-900" style="font-size:11px;line-height:1.4;"></div>
+      </div>
+      <div style="height:220px;"></div>
+    </div>
+
+    <!-- ATS Score panel -->
+    <div class="p-4 border-t border-white/5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-white">ATS Score</h3>
+        <button onclick="runATSScore()" id="refresh-ats-btn"
+                class="text-xs text-indigo-400 hover:text-indigo-300">Refresh ↻</button>
+      </div>
+
+      <!-- Score ring -->
+      <div class="flex items-center gap-4 mb-4">
+        <div class="score-ring-container flex-shrink-0">
+          <svg width="100" height="100" viewBox="0 0 100 100" class="rotate-[-90deg]">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+            <circle id="ats-ring-fill" cx="50" cy="50" r="40" fill="none"
+                    stroke="url(#atsGrad)" stroke-width="8"
+                    stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="251.2"
+                    style="transition:stroke-dashoffset 1.2s ease"/>
+            <defs>
+              <linearGradient id="atsGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#5b6ef7"/>
+                <stop offset="100%" stop-color="#a855f7"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="score-ring-text">
+            <span id="ats-score-num" class="text-2xl font-black text-white">–</span>
+            <span class="text-xs text-gray-500">/100</span>
+          </div>
+        </div>
+        <div class="flex-1 space-y-2">
+          <div id="ats-label" class="text-sm font-semibold text-gray-400">Run ATS scan</div>
+          <div id="ats-domain-label" class="text-xs text-gray-600"></div>
+        </div>
+      </div>
+
+      <!-- Template scores -->
+      <div id="template-scores" class="space-y-2 hidden">
+        <p class="text-xs text-gray-600 font-medium uppercase tracking-widest mb-2">Template Fit</p>
+        {% for tpl in ['Google','Microsoft','Meta','Oracle'] %}
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-20 text-gray-400">{{ tpl }}</span>
+          <div class="flex-1 progress-bar-track">
+            <div id="tpl-score-{{ tpl|lower }}" class="progress-bar-fill" style="width:0%"></div>
+          </div>
+          <span id="tpl-score-{{ tpl|lower }}-num" class="w-8 text-right text-gray-400">–</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Missing keywords -->
+      <div id="missing-kw-panel" class="mt-4 hidden">
+        <p class="text-xs text-gray-600 font-medium uppercase tracking-widest mb-2">Missing Keywords</p>
+        <div id="missing-kw-chips" class="flex flex-wrap gap-1.5"></div>
+      </div>
+
+      <!-- AI Suggestions -->
+      <div id="ai-suggestions-panel" class="mt-4 hidden">
+        <p class="text-xs text-gray-600 font-medium uppercase tracking-widest mb-2">💡 AI Suggestions</p>
+        <div id="ai-suggestions-list" class="space-y-2"></div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- AI Rewrite overlay -->
+<div id="rewrite-overlay" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeRewriteModal()"></div>
+  <div class="glass-card relative z-10 p-6 max-w-2xl w-full animate-slide-up max-h-[80vh] overflow-y-auto">
+    <h3 id="rewrite-title" class="text-lg font-bold text-white mb-4"></h3>
+    <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 mb-4">
+      <p class="text-sm text-indigo-200 font-medium mb-1">AI Suggestion:</p>
+      <div id="rewrite-result" class="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap min-h-[80px]">
+        <div class="flex items-center gap-2 text-gray-400"><div class="spinner"></div> Generating...</div>
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="applyRewrite()" class="btn-primary flex-1">✅ Apply</button>
+      <button onclick="closeRewriteModal()" class="btn-secondary flex-1">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/builder.js') }}"></script>
+{% endblock %}

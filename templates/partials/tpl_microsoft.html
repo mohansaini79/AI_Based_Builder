@@ -1,0 +1,81 @@
+<!-- Microsoft Template Partial -->
+{% set r = resume %}
+<div class="ms-sidebar">
+  <div class="ms-name">{{ r.full_name or 'Your Name' }}</div>
+  <div class="ms-title">{{ (r.experience[0].title if r.experience else '') }}</div>
+
+  <div class="ms-side-section">
+    <div class="ms-side-label">Contact</div>
+    {% if r.email %}<div class="ms-contact-item">✉ {{ r.email }}</div>{% endif %}
+    {% if r.phone %}<div class="ms-contact-item">📞 {{ r.phone }}</div>{% endif %}
+    {% if r.location %}<div class="ms-contact-item">📍 {{ r.location }}</div>{% endif %}
+    {% if r.linkedin %}<div class="ms-contact-item">🔗 LinkedIn</div>{% endif %}
+    {% if r.github %}<div class="ms-contact-item">💻 GitHub</div>{% endif %}
+    {% if r.website %}<div class="ms-contact-item">🌐 Website</div>{% endif %}
+  </div>
+
+  {% if r.skills %}
+  <div class="ms-side-section">
+    <div class="ms-side-label">Skills</div>
+    <div>{% for s in r.skills %}<span class="ms-skill-tag">{{ s }}</span>{% endfor %}</div>
+  </div>
+  {% endif %}
+
+  {% if r.education %}
+  <div class="ms-side-section">
+    <div class="ms-side-label">Education</div>
+    {% for edu in r.education %}
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;">{{ edu.degree or '' }}</div>
+      <div style="font-size:10.5px;opacity:0.75;">{{ edu.institution or '' }}</div>
+      <div style="font-size:10px;opacity:0.55;">{{ edu.year or '' }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if r.certifications %}
+  <div class="ms-side-section">
+    <div class="ms-side-label">Certifications</div>
+    {% for cert in r.certifications %}
+    <div style="font-size:10.5px;opacity:0.8;margin-bottom:4px;">• {{ cert }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="ms-main">
+  {% if r.summary %}
+  <div class="ms-section avoid-break">
+    <div class="ms-section-title">About Me</div>
+    <p class="ms-summary">{{ r.summary | striptags }}</p>
+  </div>
+  {% endif %}
+
+  {% if r.experience %}
+  <div class="ms-section">
+    <div class="ms-section-title">Work Experience</div>
+    {% for exp in r.experience %}
+    <div class="ms-entry avoid-break">
+      <div class="ms-entry-title">{{ exp.title or '' }}</div>
+      <div class="ms-entry-sub">{{ exp.company or '' }}</div>
+      <div class="ms-entry-meta">{{ exp.duration or '' }}{% if exp.location %} · {{ exp.location }}{% endif %}</div>
+      {% if exp.description %}<div class="ms-entry-desc">{{ exp.description | striptags }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if r.projects %}
+  <div class="ms-section">
+    <div class="ms-section-title">Projects</div>
+    {% for proj in r.projects %}
+    <div class="ms-entry avoid-break">
+      <div class="ms-entry-title">{{ proj.title or '' }}</div>
+      {% if proj.technologies %}<div class="ms-entry-sub">{{ proj.technologies }}</div>{% endif %}
+      {% if proj.description %}<div class="ms-entry-desc">{{ proj.description | striptags }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

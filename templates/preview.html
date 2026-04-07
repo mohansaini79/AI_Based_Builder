@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ resume.full_name or 'Resume' }} – Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/templates.css') }}" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { background: #1e293b; }
+    .preview-wrapper { max-width: 900px; margin: 0 auto; padding: 2rem; }
+    .toolbar { position: sticky; top: 0; z-index: 10; background: rgba(15,23,42,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+    @media print {
+      .toolbar { display: none !important; }
+      body { background: white; }
+      .preview-wrapper { padding: 0; max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <a href="/resume/{{ resume._id }}/edit"
+       class="flex items-center gap-2 text-sm text-gray-300 hover:text-white font-medium">← Back to Editor</a>
+    <div class="flex-1"></div>
+    <button onclick="downloadPDF()"
+            class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition-all">
+      ⬇ Download PDF
+    </button>
+    <button onclick="window.print()"
+            class="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 text-white rounded-lg text-sm font-medium transition-all">
+      🖨 Print
+    </button>
+  </div>
+
+  <!-- Hidden metadata for JS -->
+  <span id="resume-meta" data-name="{{ resume.full_name or 'Resume' }}" style="display:none;"></span>
+
+  <!-- Resume Document -->
+  <div class="preview-wrapper">
+    <div id="resume-document"
+         class="resume-{{ resume.template or 'google' }} bg-white shadow-2xl"
+         data-name={{ (resume.full_name or 'Resume') | tojson }}
+         style="min-height:297mm;">
+
+      {% set r = resume %}
+      {% set tpl = r.template or 'google' %}
+
+      {% if tpl == 'google' %}
+        {% include 'partials/tpl_google.html' %}
+      {% elif tpl == 'microsoft' %}
+        {% include 'partials/tpl_microsoft.html' %}
+      {% elif tpl == 'meta' %}
+        {% include 'partials/tpl_meta.html' %}
+      {% elif tpl == 'oracle' %}
+        {% include 'partials/tpl_oracle.html' %}
+      {% else %}
+        {% include 'partials/tpl_google.html' %}
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    function downloadPDF() {
+      const el = document.getElementById('resume-document');
+      const name = (document.getElementById('resume-meta') || {}).dataset?.name || 'Resume';
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: name.replace(/\s+/g, '_') + '_Resume.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+      html2pdf().set(opt).from(el).save();
+    }
+  </script>
+</body>
+</html>

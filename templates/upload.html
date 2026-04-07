@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Upload Resume – ResumeAI{% endblock %}
+
+{% block body %}
+<div class="flex h-screen overflow-hidden">
+  <!-- Sidebar -->
+  <aside class="sidebar w-56 flex-shrink-0 flex flex-col py-5 px-3">
+    <a href="/dashboard" class="flex items-center gap-2 font-bold text-base px-2 mb-8">
+      <span class="text-2xl">⚡</span><span class="gradient-text-brand">ResumeAI</span>
+    </a>
+    <nav class="flex flex-col gap-1 text-sm">
+      <a href="/dashboard"  class="sidebar-link">📊 Dashboard</a>
+      <a href="/resume/new" class="sidebar-link">✏️ New Resume</a>
+      <a href="/upload"     class="sidebar-link active">📤 Upload</a>
+    </nav>
+    <div class="mt-auto pt-4 border-t border-white/5">
+      <a href="/logout" class="sidebar-link text-xs text-gray-600 hover:text-red-400">🚪 Sign Out</a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-y-auto bg-gray-950 px-8 py-8">
+    <div class="max-w-2xl mx-auto">
+      <div class="mb-10">
+        <h1 class="text-3xl font-bold text-white mb-2">📤 Upload Your Resume</h1>
+        <p class="text-gray-400">We'll parse your PDF or DOCX and auto-fill the builder using AI — no re-typing needed.</p>
+      </div>
+
+      <!-- Drop Zone -->
+      <div id="drop-zone" class="drop-zone mb-6" onclick="document.getElementById('file-input').click()">
+        <div id="dz-idle">
+          <div class="text-6xl mb-4">📁</div>
+          <p class="text-lg font-semibold text-white mb-1">Drop your resume here</p>
+          <p class="text-sm text-gray-500 mb-4">Supports PDF and DOCX files · Max 10MB</p>
+          <span class="btn-secondary text-sm px-5 py-2 pointer-events-none">Browse Files</span>
+        </div>
+        <div id="dz-selected" class="hidden">
+          <div class="text-5xl mb-3" id="dz-file-icon">📄</div>
+          <p id="dz-file-name" class="text-base font-semibold text-white mb-1"></p>
+          <p id="dz-file-size" class="text-sm text-gray-500 mb-4"></p>
+          <button onclick="clearFile(event)" class="btn-danger text-xs px-4 py-1.5">Remove File</button>
+        </div>
+      </div>
+      <input id="file-input" type="file" accept=".pdf,.docx" class="hidden" />
+
+      <!-- Parse Button -->
+      <button id="parse-btn" onclick="uploadAndParse()" disabled
+              class="btn-primary w-full py-3.5 mb-8 opacity-50 cursor-not-allowed">
+        🤖 Parse with AI
+      </button>
+
+      <!-- Progress -->
+      <div id="upload-progress" class="hidden mb-8">
+        <div class="glass-card p-5 text-center">
+          <div class="flex justify-center mb-3"><div class="spinner w-8 h-8 border-[3px]"></div></div>
+          <p class="text-white font-semibold mb-1" id="progress-msg">Uploading file...</p>
+          <p class="text-gray-500 text-sm">This usually takes 5–15 seconds</p>
+          <div class="progress-bar-track mt-4">
+            <div id="progress-fill" class="progress-bar-fill" style="width:0%;transition:width 0.4s ease;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parsed Preview -->
+      <div id="parsed-preview" class="hidden">
+        <div class="glass-card p-6 mb-6">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xl">✅</div>
+            <div>
+              <h3 class="font-bold text-white">Resume Parsed Successfully</h3>
+              <p class="text-sm text-gray-400">Review the extracted data below before importing</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="glass-card p-3">
+              <p class="text-gray-500 text-xs mb-1">Name</p>
+              <p id="pr-name" class="text-white font-medium">–</p>
+            </div>
+            <div class="glass-card p-3">
+              <p class="text-gray-500 text-xs mb-1">Email</p>
+              <p id="pr-email" class="text-white font-medium">–</p>
+            </div>
+            <div class="glass-card p-3">
+              <p class="text-gray-500 text-xs mb-1">Phone</p>
+              <p id="pr-phone" class="text-white font-medium">–</p>
+            </div>
+            <div class="glass-card p-3">
+              <p class="text-gray-500 text-xs mb-1">Location</p>
+              <p id="pr-location" class="text-white font-medium">–</p>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <p class="text-gray-500 text-xs mb-2">Summary Preview</p>
+            <p id="pr-summary" class="text-gray-300 text-sm line-clamp-3"></p>
+          </div>
+
+          <div class="mt-4">
+            <p class="text-gray-500 text-xs mb-2">Skills Detected</p>
+            <div id="pr-skills" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
+          <div class="mt-4">
+            <p class="text-gray-500 text-xs mb-2">Experience Entries</p>
+            <p id="pr-exp-count" class="text-white text-sm font-medium"></p>
+          </div>
+
+          <div class="mt-4">
+            <p class="text-gray-500 text-xs mb-2">Education Entries</p>
+            <p id="pr-edu-count" class="text-white text-sm font-medium"></p>
+          </div>
+        </div>
+
+        <!-- Template chooser -->
+        <div class="glass-card p-5 mb-6">
+          <p class="text-sm font-semibold text-white mb-3">Choose a Template</p>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {% for name, emoji, color in [('google','🔵','from-blue-600 to-green-500'),('microsoft','🪟','from-blue-500 to-cyan-400'),('meta','🔷','from-blue-600 to-indigo-600'),('oracle','🔴','from-red-600 to-orange-500')] %}
+            <button id="tpl-pick-{{ name }}" onclick="selectUploadTemplate('{{ name }}')"
+                    class="template-card py-3 text-center text-sm font-semibold {% if name == 'google' %}selected{% endif %}">
+              <div class="text-2xl mb-1">{{ emoji }}</div>
+              <div class="text-gray-300">{{ name|title }}</div>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <button id="import-btn" onclick="importToBuilder()"
+                  class="btn-primary flex-1 py-3.5">
+            🚀 Import to Builder
+          </button>
+          <button onclick="resetUpload()" class="btn-secondary px-5 py-3.5">↺ Reset</button>
+        </div>
+      </div>
+
+      <!-- Error panel -->
+      <div id="upload-error" class="hidden">
+        <div class="glass-card p-5 border border-red-500/30 bg-red-500/5">
+          <p class="text-red-400 font-semibold mb-1">⚠️ Parse Failed</p>
+          <p id="upload-error-msg" class="text-gray-400 text-sm"></p>
+          <button onclick="resetUpload()" class="btn-danger mt-4 text-sm px-4 py-2">Try Again</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}

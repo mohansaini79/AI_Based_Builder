@@ -1,0 +1,80 @@
+<!-- Meta Template Partial -->
+{% set r = resume %}
+<div class="mt-header avoid-break">
+  <div class="mt-name">{{ r.full_name or 'Your Name' }}</div>
+  <div class="mt-contact">
+    {% if r.email %}<span>✉ {{ r.email }}</span>{% endif %}
+    {% if r.phone %}<span>📞 {{ r.phone }}</span>{% endif %}
+    {% if r.location %}<span>📍 {{ r.location }}</span>{% endif %}
+    {% if r.linkedin %}<a href="{{ r.linkedin }}">🔗 LinkedIn</a>{% endif %}
+    {% if r.github %}<a href="{{ r.github }}">💻 GitHub</a>{% endif %}
+    {% if r.website %}<a href="{{ r.website }}">🌐 Website</a>{% endif %}
+  </div>
+</div>
+
+<div class="mt-body">
+  {% if r.summary %}
+  <div class="avoid-break" style="margin-bottom:18px;">
+    <div class="mt-section-title" style="margin-top:0;">Summary</div>
+    <p class="mt-summary">{{ r.summary | striptags }}</p>
+  </div>
+  {% endif %}
+
+  <div class="mt-cols">
+    <!-- Left col -->
+    <div>
+      {% if r.experience %}
+      <div class="mt-section-title" style="margin-top:0;">Experience</div>
+      {% for exp in r.experience %}
+      <div class="mt-entry avoid-break">
+        <div class="mt-entry-title">{{ exp.title or '' }}</div>
+        <div class="mt-entry-sub">{{ exp.company or '' }}</div>
+        <div class="mt-entry-meta">{{ exp.duration or '' }}{% if exp.location %} · {{ exp.location }}{% endif %}</div>
+        {% if exp.description %}<div class="mt-entry-desc">{{ exp.description | striptags }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      {% if r.projects %}
+      <div class="mt-section-title">Projects</div>
+      {% for proj in r.projects %}
+      <div class="mt-entry avoid-break">
+        <div class="mt-entry-title">{{ proj.title or '' }}
+          {% if proj.link %}<a href="{{ proj.link }}" style="font-size:10px;color:#0866ff;margin-left:5px;">↗</a>{% endif %}
+        </div>
+        {% if proj.technologies %}<div class="mt-entry-sub" style="font-size:11px;">{{ proj.technologies }}</div>{% endif %}
+        {% if proj.description %}<div class="mt-entry-desc">{{ proj.description | striptags }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+
+    <!-- Right col -->
+    <div>
+      {% if r.skills %}
+      <div class="mt-section-title" style="margin-top:0;">Skills</div>
+      <div style="margin-bottom:18px;">
+        {% for s in r.skills %}<span class="mt-skill-chip">{{ s }}</span>{% endfor %}
+      </div>
+      {% endif %}
+
+      {% if r.education %}
+      <div class="mt-section-title">Education</div>
+      {% for edu in r.education %}
+      <div class="mt-entry avoid-break">
+        <div class="mt-entry-title">{{ edu.degree or '' }}</div>
+        <div class="mt-entry-sub">{{ edu.institution or '' }}</div>
+        <div class="mt-entry-meta">{{ edu.year or '' }}{% if edu.gpa %} · GPA: {{ edu.gpa }}{% endif %}</div>
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      {% if r.certifications %}
+      <div class="mt-section-title">Certifications</div>
+      {% for cert in r.certifications %}
+      <div style="font-size:12px;color:#374151;margin-bottom:5px;">• {{ cert }}</div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</div>
