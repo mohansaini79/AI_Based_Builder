@@ -71,7 +71,7 @@ os.makedirs(app.config["SESSION_FILE_DIR"], exist_ok=True)
 Session(app)
 
 # ── MongoDB ──────────────────────────────────────────────────────────────────
-mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/ai_resume_builder")
+mongo_uri = os.getenv("MONGO_URI")
 mongo_client = MongoClient(mongo_uri)
 db = mongo_client["ai_resume_builder"]
 users_col = db["users"]
@@ -87,7 +87,7 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY", ""))
 # ── Google OAuth config ──────────────────────────────────────────────────────
 GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI  = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback")
+GOOGLE_REDIRECT_URI  = os.getenv("GOOGLE_REDIRECT_URI")
 GOOGLE_AUTH_URL      = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL     = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL  = "https://www.googleapis.com/oauth2/v2/userinfo"
