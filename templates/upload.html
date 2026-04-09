@@ -2,145 +2,200 @@
 {% block title %}Upload Resume – ResumeAI{% endblock %}
 
 {% block body %}
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<!-- Mobile Sidebar -->
+<div id="sidebar-drawer" class="sidebar-drawer sidebar flex flex-col py-5 px-3">
+  <div class="flex items-center justify-between px-2 mb-6">
+    <a href="/dashboard" class="flex items-center gap-2 font-bold text-base">
+      <i class="fa-solid fa-bolt text-yellow-400 text-xl"></i>
+      <span class="gradient-text-brand">ResumeAI</span>
+    </a>
+    <button id="sidebar-close-btn"
+            class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white rounded-lg hover:bg-white/10">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+  </div>
+  <nav class="flex flex-col gap-1 text-sm">
+    <a href="/dashboard"  class="sidebar-link"><i class="fa-solid fa-gauge w-4 text-center"></i> Dashboard</a>
+    <a href="/resume/new" class="sidebar-link"><i class="fa-solid fa-pen-to-square w-4 text-center"></i> New Resume</a>
+    <a href="/upload"     class="sidebar-link active"><i class="fa-solid fa-upload w-4 text-center"></i> Upload</a>
+  </nav>
+  <div class="mt-auto pt-4 border-t border-white/5">
+    <a href="/logout" class="sidebar-link text-xs text-gray-500 hover:text-red-400">
+      <i class="fa-solid fa-arrow-right-from-bracket w-4 text-center"></i> Sign Out
+    </a>
+  </div>
+</div>
+
 <div class="flex h-screen overflow-hidden">
-  <!-- Sidebar -->
-  <aside class="sidebar w-56 flex-shrink-0 flex flex-col py-5 px-3">
+  <!-- Desktop Sidebar -->
+  <aside class="sidebar-desktop sidebar w-56 flex-shrink-0 flex flex-col py-5 px-3">
     <a href="/dashboard" class="flex items-center gap-2 font-bold text-base px-2 mb-8">
-      <span class="text-2xl">⚡</span><span class="gradient-text-brand">ResumeAI</span>
+      <i class="fa-solid fa-bolt text-yellow-400 text-2xl"></i>
+      <span class="gradient-text-brand">ResumeAI</span>
     </a>
     <nav class="flex flex-col gap-1 text-sm">
-      <a href="/dashboard"  class="sidebar-link">📊 Dashboard</a>
-      <a href="/resume/new" class="sidebar-link">✏️ New Resume</a>
-      <a href="/upload"     class="sidebar-link active">📤 Upload</a>
+      <a href="/dashboard"  class="sidebar-link"><i class="fa-solid fa-gauge w-4 text-center"></i> Dashboard</a>
+      <a href="/resume/new" class="sidebar-link"><i class="fa-solid fa-pen-to-square w-4 text-center"></i> New Resume</a>
+      <a href="/upload"     class="sidebar-link active"><i class="fa-solid fa-upload w-4 text-center"></i> Upload</a>
     </nav>
     <div class="mt-auto pt-4 border-t border-white/5">
-      <a href="/logout" class="sidebar-link text-xs text-gray-600 hover:text-red-400">🚪 Sign Out</a>
+      <a href="/logout" class="sidebar-link text-xs text-gray-500 hover:text-red-400">
+        <i class="fa-solid fa-arrow-right-from-bracket w-4 text-center"></i> Sign Out
+      </a>
     </div>
   </aside>
 
-  <!-- Main -->
-  <main class="flex-1 overflow-y-auto bg-gray-950 px-8 py-8">
-    <div class="max-w-2xl mx-auto">
-      <div class="mb-10">
-        <h1 class="text-3xl font-bold text-white mb-2">📤 Upload Your Resume</h1>
-        <p class="text-gray-400">We'll parse your PDF or DOCX and auto-fill the builder using AI — no re-typing needed.</p>
-      </div>
-
-      <!-- Drop Zone -->
-      <div id="drop-zone" class="drop-zone mb-6" onclick="document.getElementById('file-input').click()">
-        <div id="dz-idle">
-          <div class="text-6xl mb-4">📁</div>
-          <p class="text-lg font-semibold text-white mb-1">Drop your resume here</p>
-          <p class="text-sm text-gray-500 mb-4">Supports PDF and DOCX files · Max 10MB</p>
-          <span class="btn-secondary text-sm px-5 py-2 pointer-events-none">Browse Files</span>
-        </div>
-        <div id="dz-selected" class="hidden">
-          <div class="text-5xl mb-3" id="dz-file-icon">📄</div>
-          <p id="dz-file-name" class="text-base font-semibold text-white mb-1"></p>
-          <p id="dz-file-size" class="text-sm text-gray-500 mb-4"></p>
-          <button onclick="clearFile(event)" class="btn-danger text-xs px-4 py-1.5">Remove File</button>
-        </div>
-      </div>
-      <input id="file-input" type="file" accept=".pdf,.docx" class="hidden" />
-
-      <!-- Parse Button -->
-      <button id="parse-btn" onclick="uploadAndParse()" disabled
-              class="btn-primary w-full py-3.5 mb-8 opacity-50 cursor-not-allowed">
-        🤖 Parse with AI
+  <main class="flex-1 overflow-y-auto bg-gray-950">
+    <!-- Mobile top bar -->
+    <div class="sticky top-0 z-30 bg-gray-950/90 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center gap-3 md:hidden">
+      <button id="sidebar-open-btn" class="hamburger-btn" aria-label="Open menu">
+        <i class="fa-solid fa-bars text-sm"></i>
       </button>
+      <span class="font-semibold text-white">Upload Resume</span>
+    </div>
 
-      <!-- Progress -->
-      <div id="upload-progress" class="hidden mb-8">
-        <div class="glass-card p-5 text-center">
-          <div class="flex justify-center mb-3"><div class="spinner w-8 h-8 border-[3px]"></div></div>
-          <p class="text-white font-semibold mb-1" id="progress-msg">Uploading file...</p>
-          <p class="text-gray-500 text-sm">This usually takes 5–15 seconds</p>
-          <div class="progress-bar-track mt-4">
-            <div id="progress-fill" class="progress-bar-fill" style="width:0%;transition:width 0.4s ease;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Parsed Preview -->
-      <div id="parsed-preview" class="hidden">
-        <div class="glass-card p-6 mb-6">
-          <div class="flex items-center gap-3 mb-5">
-            <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xl">✅</div>
-            <div>
-              <h3 class="font-bold text-white">Resume Parsed Successfully</h3>
-              <p class="text-sm text-gray-400">Review the extracted data below before importing</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 text-sm">
-            <div class="glass-card p-3">
-              <p class="text-gray-500 text-xs mb-1">Name</p>
-              <p id="pr-name" class="text-white font-medium">–</p>
-            </div>
-            <div class="glass-card p-3">
-              <p class="text-gray-500 text-xs mb-1">Email</p>
-              <p id="pr-email" class="text-white font-medium">–</p>
-            </div>
-            <div class="glass-card p-3">
-              <p class="text-gray-500 text-xs mb-1">Phone</p>
-              <p id="pr-phone" class="text-white font-medium">–</p>
-            </div>
-            <div class="glass-card p-3">
-              <p class="text-gray-500 text-xs mb-1">Location</p>
-              <p id="pr-location" class="text-white font-medium">–</p>
-            </div>
-          </div>
-
-          <div class="mt-4">
-            <p class="text-gray-500 text-xs mb-2">Summary Preview</p>
-            <p id="pr-summary" class="text-gray-300 text-sm line-clamp-3"></p>
-          </div>
-
-          <div class="mt-4">
-            <p class="text-gray-500 text-xs mb-2">Skills Detected</p>
-            <div id="pr-skills" class="flex flex-wrap gap-1.5"></div>
-          </div>
-
-          <div class="mt-4">
-            <p class="text-gray-500 text-xs mb-2">Experience Entries</p>
-            <p id="pr-exp-count" class="text-white text-sm font-medium"></p>
-          </div>
-
-          <div class="mt-4">
-            <p class="text-gray-500 text-xs mb-2">Education Entries</p>
-            <p id="pr-edu-count" class="text-white text-sm font-medium"></p>
-          </div>
+    <div class="upload-main px-4 sm:px-8 py-6 sm:py-8">
+      <div class="max-w-2xl mx-auto">
+        <div class="mb-8 sm:mb-10">
+          <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
+            <i class="fa-solid fa-file-arrow-up text-indigo-400"></i> Upload Your Resume
+          </h1>
+          <p class="text-gray-400 text-sm sm:text-base">We'll parse your PDF or DOCX and auto-fill the builder using AI — no re-typing needed.</p>
         </div>
 
-        <!-- Template chooser -->
-        <div class="glass-card p-5 mb-6">
-          <p class="text-sm font-semibold text-white mb-3">Choose a Template</p>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {% for name, emoji, color in [('google','🔵','from-blue-600 to-green-500'),('microsoft','🪟','from-blue-500 to-cyan-400'),('meta','🔷','from-blue-600 to-indigo-600'),('oracle','🔴','from-red-600 to-orange-500')] %}
-            <button id="tpl-pick-{{ name }}" onclick="selectUploadTemplate('{{ name }}')"
-                    class="template-card py-3 text-center text-sm font-semibold {% if name == 'google' %}selected{% endif %}">
-              <div class="text-2xl mb-1">{{ emoji }}</div>
-              <div class="text-gray-300">{{ name|title }}</div>
+        <!-- Drop Zone -->
+        <div id="drop-zone" class="drop-zone mb-6" onclick="document.getElementById('file-input').click()">
+          <div id="dz-idle">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center mx-auto mb-4">
+              <i class="fa-solid fa-cloud-arrow-up text-3xl text-indigo-400"></i>
+            </div>
+            <p class="text-base sm:text-lg font-semibold text-white mb-1">Drop your resume here</p>
+            <p class="text-sm text-gray-500 mb-4">Supports PDF and DOCX · Max 10 MB</p>
+            <span class="btn-secondary text-sm px-5 py-2 pointer-events-none">
+              <i class="fa-solid fa-folder-open mr-1"></i> Browse Files
+            </span>
+          </div>
+          <div id="dz-selected" class="hidden">
+            <div class="w-14 h-14 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center mx-auto mb-3">
+              <i id="dz-file-icon" class="fa-solid fa-file-pdf text-2xl text-emerald-400"></i>
+            </div>
+            <p id="dz-file-name" class="text-base font-semibold text-white mb-1 break-all"></p>
+            <p id="dz-file-size" class="text-sm text-gray-500 mb-4"></p>
+            <button onclick="clearFile(event)" class="btn-danger text-xs px-4 py-1.5">
+              <i class="fa-solid fa-xmark"></i> Remove File
             </button>
-            {% endfor %}
+          </div>
+        </div>
+        <input id="file-input" type="file" accept=".pdf,.docx" class="hidden" />
+
+        <button id="parse-btn" onclick="uploadAndParse()" disabled
+                class="btn-primary w-full py-3 sm:py-3.5 mb-6 sm:mb-8 opacity-50 cursor-not-allowed">
+          <i class="fa-solid fa-robot"></i> Parse with AI
+        </button>
+
+        <!-- Progress -->
+        <div id="upload-progress" class="hidden mb-6">
+          <div class="glass-card p-5 text-center">
+            <div class="flex justify-center mb-3">
+              <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-400"></i>
+            </div>
+            <p class="text-white font-semibold mb-1" id="progress-msg">Uploading file...</p>
+            <p class="text-gray-500 text-sm">This usually takes 5–15 seconds</p>
+            <div class="progress-bar-track mt-4">
+              <div id="progress-fill" class="progress-bar-fill" style="width:0%;transition:width 0.4s ease;"></div>
+            </div>
           </div>
         </div>
 
-        <div class="flex gap-3">
-          <button id="import-btn" onclick="importToBuilder()"
-                  class="btn-primary flex-1 py-3.5">
-            🚀 Import to Builder
-          </button>
-          <button onclick="resetUpload()" class="btn-secondary px-5 py-3.5">↺ Reset</button>
-        </div>
-      </div>
+        <!-- Parsed Preview -->
+        <div id="parsed-preview" class="hidden">
+          <div class="glass-card p-5 sm:p-6 mb-6">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-white">Resume Parsed Successfully</h3>
+                <p class="text-sm text-gray-400">Review the extracted data before importing</p>
+              </div>
+            </div>
 
-      <!-- Error panel -->
-      <div id="upload-error" class="hidden">
-        <div class="glass-card p-5 border border-red-500/30 bg-red-500/5">
-          <p class="text-red-400 font-semibold mb-1">⚠️ Parse Failed</p>
-          <p id="upload-error-msg" class="text-gray-400 text-sm"></p>
-          <button onclick="resetUpload()" class="btn-danger mt-4 text-sm px-4 py-2">Try Again</button>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div class="glass-card p-3">
+                <p class="text-gray-500 text-xs mb-1"><i class="fa-solid fa-user mr-1"></i>Name</p>
+                <p id="pr-name" class="text-white font-medium truncate">–</p>
+              </div>
+              <div class="glass-card p-3">
+                <p class="text-gray-500 text-xs mb-1"><i class="fa-solid fa-envelope mr-1"></i>Email</p>
+                <p id="pr-email" class="text-white font-medium truncate">–</p>
+              </div>
+              <div class="glass-card p-3">
+                <p class="text-gray-500 text-xs mb-1"><i class="fa-solid fa-phone mr-1"></i>Phone</p>
+                <p id="pr-phone" class="text-white font-medium">–</p>
+              </div>
+              <div class="glass-card p-3">
+                <p class="text-gray-500 text-xs mb-1"><i class="fa-solid fa-location-dot mr-1"></i>Location</p>
+                <p id="pr-location" class="text-white font-medium truncate">–</p>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <p class="text-gray-500 text-xs mb-2"><i class="fa-solid fa-file-lines mr-1"></i>Summary Preview</p>
+              <p id="pr-summary" class="text-gray-300 text-sm line-clamp-3"></p>
+            </div>
+            <div class="mt-4">
+              <p class="text-gray-500 text-xs mb-2"><i class="fa-solid fa-screwdriver-wrench mr-1"></i>Skills Detected</p>
+              <div id="pr-skills" class="flex flex-wrap gap-1.5"></div>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-gray-500 text-xs mb-1"><i class="fa-solid fa-briefcase mr-1"></i>Experience Entries</p>
+                <p id="pr-exp-count" class="text-white text-sm font-medium"></p>
+              </div>
+              <div>
+                <p class="text-gray-500 text-xs mb-1"><i class="fa-solid fa-graduation-cap mr-1"></i>Education Entries</p>
+                <p id="pr-edu-count" class="text-white text-sm font-medium"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Template chooser -->
+          <div class="glass-card p-4 sm:p-5 mb-6">
+            <p class="text-sm font-semibold text-white mb-3">Choose a Template</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {% for name, color, letter in [('google','bg-blue-600','G'),('microsoft','bg-blue-500','M'),('meta','bg-indigo-600','M'),('oracle','bg-red-600','O')] %}
+              <button id="tpl-pick-{{ name }}" onclick="selectUploadTemplate('{{ name }}')"
+                      class="template-card py-4 text-center {% if name == 'google' %}selected{% endif %}">
+                <div class="w-10 h-10 rounded-lg {{ color }} flex items-center justify-center text-white font-bold text-lg mx-auto mb-2">{{ letter }}</div>
+                <div class="text-gray-300 text-sm font-semibold">{{ name|title }}</div>
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-3">
+            <button id="import-btn" onclick="importToBuilder()" class="btn-primary flex-1 py-3">
+              <i class="fa-solid fa-rocket"></i> Import to Builder
+            </button>
+            <button onclick="resetUpload()" class="btn-secondary px-6 py-3">
+              <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div id="upload-error" class="hidden">
+          <div class="glass-card p-4 sm:p-5 border border-red-500/30 bg-red-500/5">
+            <p class="text-red-400 font-semibold mb-1">
+              <i class="fa-solid fa-triangle-exclamation mr-1"></i> Parse Failed
+            </p>
+            <p id="upload-error-msg" class="text-gray-400 text-sm"></p>
+            <button onclick="resetUpload()" class="btn-danger mt-4 text-sm px-4 py-2">
+              <i class="fa-solid fa-rotate-left"></i> Try Again
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -58,7 +58,15 @@ function handleFileSelect(file) {
   document.getElementById('dz-idle').classList.add('hidden');
   const dzSel = document.getElementById('dz-selected');
   dzSel.classList.remove('hidden');
-  document.getElementById('dz-file-icon').textContent = ext === '.pdf' ? '📄' : '📝';
+
+  // Update FA icon based on file type
+  const icon = document.getElementById('dz-file-icon');
+  if (icon) {
+    icon.className = ext === '.pdf'
+      ? 'fa-solid fa-file-pdf text-2xl text-emerald-400'
+      : 'fa-solid fa-file-word text-2xl text-blue-400';
+  }
+
   document.getElementById('dz-file-name').textContent = file.name;
   document.getElementById('dz-file-size').textContent = formatBytes(file.size);
 
@@ -175,7 +183,7 @@ function selectUploadTemplate(tpl) {
 async function importToBuilder() {
   if (!parsedData) return;
   const btn = document.getElementById('import-btn');
-  btn.innerHTML = '<div class="spinner inline-block mr-2"></div> Creating resume...';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating resume…';
   btn.disabled  = true;
 
   const payload = {
@@ -206,11 +214,11 @@ async function importToBuilder() {
     if (json.resume_id) {
       window.location.href = `/resume/${json.resume_id}/edit`;
     } else {
-      btn.innerHTML = '❌ Failed';
+      btn.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Failed';
       btn.disabled  = false;
     }
   } catch(e) {
-    btn.innerHTML = '❌ Error';
+    btn.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Error';
     btn.disabled  = false;
   }
 }

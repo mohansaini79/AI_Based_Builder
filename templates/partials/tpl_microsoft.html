@@ -6,12 +6,12 @@
 
   <div class="ms-side-section">
     <div class="ms-side-label">Contact</div>
-    {% if r.email %}<div class="ms-contact-item">✉ {{ r.email }}</div>{% endif %}
-    {% if r.phone %}<div class="ms-contact-item">📞 {{ r.phone }}</div>{% endif %}
-    {% if r.location %}<div class="ms-contact-item">📍 {{ r.location }}</div>{% endif %}
-    {% if r.linkedin %}<div class="ms-contact-item">🔗 LinkedIn</div>{% endif %}
-    {% if r.github %}<div class="ms-contact-item">💻 GitHub</div>{% endif %}
-    {% if r.website %}<div class="ms-contact-item">🌐 Website</div>{% endif %}
+    {% if r.email    %}<div class="ms-contact-item">{{ r.email }}</div>{% endif %}
+    {% if r.phone    %}<div class="ms-contact-item">{{ r.phone }}</div>{% endif %}
+    {% if r.location %}<div class="ms-contact-item">{{ r.location }}</div>{% endif %}
+    {% if r.linkedin %}<div class="ms-contact-item">LinkedIn</div>{% endif %}
+    {% if r.github   %}<div class="ms-contact-item">GitHub</div>{% endif %}
+    {% if r.website  %}<div class="ms-contact-item">{{ r.website }}</div>{% endif %}
   </div>
 
   {% if r.skills %}
@@ -38,7 +38,7 @@
   <div class="ms-side-section">
     <div class="ms-side-label">Certifications</div>
     {% for cert in r.certifications %}
-    <div style="font-size:10.5px;opacity:0.8;margin-bottom:4px;">• {{ cert }}</div>
+    <div style="font-size:10.5px;opacity:0.8;margin-bottom:4px;">&bull; {{ cert }}</div>
     {% endfor %}
   </div>
   {% endif %}
@@ -59,7 +59,7 @@
     <div class="ms-entry avoid-break">
       <div class="ms-entry-title">{{ exp.title or '' }}</div>
       <div class="ms-entry-sub">{{ exp.company or '' }}</div>
-      <div class="ms-entry-meta">{{ exp.duration or '' }}{% if exp.location %} · {{ exp.location }}{% endif %}</div>
+      <div class="ms-entry-meta">{{ exp.duration or '' }}{% if exp.location %} &middot; {{ exp.location }}{% endif %}</div>
       {% if exp.description %}<div class="ms-entry-desc">{{ exp.description | striptags }}</div>{% endif %}
     </div>
     {% endfor %}

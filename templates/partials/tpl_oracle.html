@@ -4,12 +4,12 @@
   <div class="oc-name">{{ r.full_name or 'Your Name' }}</div>
   {% if r.experience %}<div class="oc-tagline">{{ r.experience[0].title or '' }}</div>{% endif %}
   <div class="oc-contact">
-    {% if r.email %}<span>✉ {{ r.email }}</span>{% endif %}
-    {% if r.phone %}<span>📞 {{ r.phone }}</span>{% endif %}
-    {% if r.location %}<span>📍 {{ r.location }}</span>{% endif %}
-    {% if r.linkedin %}<a href="{{ r.linkedin }}">🔗 LinkedIn</a>{% endif %}
-    {% if r.github %}<a href="{{ r.github }}">💻 GitHub</a>{% endif %}
-    {% if r.website %}<a href="{{ r.website }}">🌐 Website</a>{% endif %}
+    {% if r.email    %}<span>{{ r.email }}</span>{% endif %}
+    {% if r.phone    %}<span>{{ r.phone }}</span>{% endif %}
+    {% if r.location %}<span>{{ r.location }}</span>{% endif %}
+    {% if r.linkedin %}<a href="{{ r.linkedin }}">LinkedIn</a>{% endif %}
+    {% if r.github   %}<a href="{{ r.github }}">GitHub</a>{% endif %}
+    {% if r.website  %}<a href="{{ r.website }}">{{ r.website }}</a>{% endif %}
   </div>
 </div>
 
@@ -29,7 +29,7 @@
     <div class="oc-entry avoid-break">
       <div class="oc-entry-title">{{ exp.title or '' }}</div>
       <div class="oc-entry-sub">{{ exp.company or '' }}</div>
-      <div class="oc-entry-meta">{{ exp.duration or '' }}{% if exp.location %} · {{ exp.location }}{% endif %}</div>
+      <div class="oc-entry-meta">{{ exp.duration or '' }}{% if exp.location %} &middot; {{ exp.location }}{% endif %}</div>
       {% if exp.description %}<div class="oc-entry-desc">{{ exp.description | striptags }}</div>{% endif %}
     </div>
     {% endfor %}
@@ -40,7 +40,7 @@
     {% for proj in r.projects %}
     <div class="oc-entry avoid-break">
       <div class="oc-entry-title">{{ proj.title or '' }}
-        {% if proj.link %}<a href="{{ proj.link }}" style="color:#c74634;font-size:10px;margin-left:5px;">↗</a>{% endif %}
+        {% if proj.link %}<a href="{{ proj.link }}" style="color:#c74634;font-size:10px;margin-left:5px;">&nearr;</a>{% endif %}
       </div>
       {% if proj.technologies %}<div class="oc-entry-sub" style="font-size:11px;">{{ proj.technologies }}</div>{% endif %}
       {% if proj.description %}<div class="oc-entry-desc">{{ proj.description | striptags }}</div>{% endif %}
@@ -64,7 +64,7 @@
     <div class="oc-entry avoid-break">
       <div class="oc-entry-title" style="font-size:12px;">{{ edu.degree or '' }}</div>
       <div class="oc-entry-sub" style="font-size:11px;">{{ edu.institution or '' }}</div>
-      <div class="oc-entry-meta">{{ edu.year or '' }}{% if edu.gpa %} · GPA {{ edu.gpa }}{% endif %}</div>
+      <div class="oc-entry-meta">{{ edu.year or '' }}{% if edu.gpa %} &middot; GPA {{ edu.gpa }}{% endif %}</div>
     </div>
     {% endfor %}
     {% endif %}

@@ -2,22 +2,56 @@
 {% block title %}Dashboard – ResumeAI{% endblock %}
 
 {% block body %}
-<div class="flex h-screen overflow-hidden">
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-  <!-- ── Sidebar ── -->
-  <aside class="sidebar w-60 flex-shrink-0 flex flex-col py-6 px-3 overflow-y-auto">
+<!-- Mobile Sidebar Drawer -->
+<div id="sidebar-drawer" class="sidebar-drawer sidebar flex flex-col py-6 px-3">
+  <div class="flex items-center justify-between px-3 mb-8">
+    <a href="/" class="flex items-center gap-2 font-bold text-lg">
+      <i class="fa-solid fa-bolt text-yellow-400 text-2xl"></i>
+      <span class="gradient-text-brand">ResumeAI</span>
+    </a>
+    <button id="sidebar-close-btn"
+            class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white rounded-lg hover:bg-white/10">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+  </div>
+  <nav class="flex flex-col gap-1">
+    <a href="/dashboard"  class="sidebar-link active"><i class="fa-solid fa-gauge w-4 text-center"></i> Dashboard</a>
+    <a href="/resume/new" class="sidebar-link"><i class="fa-solid fa-pen-to-square w-4 text-center"></i> New Resume</a>
+    <a href="/upload"     class="sidebar-link"><i class="fa-solid fa-upload w-4 text-center"></i> Upload Resume</a>
+  </nav>
+  <div class="mt-auto pt-6 border-t border-white/5">
+    <div class="flex items-center gap-3 px-3 mb-4">
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+        {{ session.user_name[0]|upper if session.user_name else '?' }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium text-white truncate">{{ session.user_name }}</div>
+        <div class="text-xs text-gray-500 truncate">{{ session.user_email }}</div>
+      </div>
+    </div>
+    <a href="/logout" class="sidebar-link text-red-400 hover:text-red-300 hover:bg-red-900/20">
+      <i class="fa-solid fa-arrow-right-from-bracket w-4 text-center"></i> Sign Out
+    </a>
+  </div>
+</div>
+
+<div class="flex h-screen overflow-hidden">
+  <!-- Desktop Sidebar -->
+  <aside class="sidebar-desktop sidebar w-60 flex-shrink-0 flex flex-col py-6 px-3 overflow-y-auto">
     <a href="/" class="flex items-center gap-2 font-bold text-lg px-3 mb-8">
-      <span class="text-2xl">⚡</span>
+      <i class="fa-solid fa-bolt text-yellow-400 text-2xl"></i>
       <span class="gradient-text-brand">ResumeAI</span>
     </a>
     <nav class="flex flex-col gap-1">
-      <a href="/dashboard"   class="sidebar-link active">📊 Dashboard</a>
-      <a href="/resume/new"  class="sidebar-link">✏️ New Resume</a>
-      <a href="/upload"      class="sidebar-link">📤 Upload Resume</a>
+      <a href="/dashboard"  class="sidebar-link active"><i class="fa-solid fa-gauge w-4 text-center"></i> Dashboard</a>
+      <a href="/resume/new" class="sidebar-link"><i class="fa-solid fa-pen-to-square w-4 text-center"></i> New Resume</a>
+      <a href="/upload"     class="sidebar-link"><i class="fa-solid fa-upload w-4 text-center"></i> Upload Resume</a>
     </nav>
     <div class="mt-auto pt-6 border-t border-white/5">
       <div class="flex items-center gap-3 px-3 mb-4">
-        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
           {{ session.user_name[0]|upper if session.user_name else '?' }}
         </div>
         <div class="flex-1 min-w-0">
@@ -25,40 +59,54 @@
           <div class="text-xs text-gray-500 truncate">{{ session.user_email }}</div>
         </div>
       </div>
-      <a href="/logout" class="sidebar-link text-red-400 hover:text-red-300 hover:bg-red-900/20">🚪 Sign Out</a>
+      <a href="/logout" class="sidebar-link text-red-400 hover:text-red-300 hover:bg-red-900/20">
+        <i class="fa-solid fa-arrow-right-from-bracket w-4 text-center"></i> Sign Out
+      </a>
     </div>
   </aside>
 
-  <!-- ── Main ── -->
+  <!-- Main -->
   <main class="flex-1 overflow-y-auto bg-gray-950">
     <!-- Top bar -->
-    <div class="sticky top-0 z-30 bg-gray-950/90 backdrop-blur border-b border-white/5 px-8 py-4 flex items-center justify-between">
-      <div>
-        <h1 class="text-xl font-bold text-white">My Resumes</h1>
-        <p class="text-sm text-gray-500">{{ resumes|length }} resume{% if resumes|length != 1 %}s{% endif %} total</p>
+    <div class="sticky top-0 z-30 bg-gray-950/90 backdrop-blur border-b border-white/5 px-4 sm:px-8 py-3 flex items-center gap-3">
+      <button id="sidebar-open-btn" class="hamburger-btn" aria-label="Open menu">
+        <i class="fa-solid fa-bars text-sm"></i>
+      </button>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-lg sm:text-xl font-bold text-white">My Resumes</h1>
+        <p class="text-xs text-gray-500">{{ resumes|length }} resume{% if resumes|length != 1 %}s{% endif %} total</p>
       </div>
-      <div class="flex items-center gap-3">
-        <a href="/upload" class="btn-secondary text-sm px-4 py-2">📤 Upload</a>
-        <a href="/resume/new" class="btn-primary text-sm px-4 py-2">+ New Resume</a>
+      <div class="flex items-center gap-2">
+        <a href="/upload"     class="btn-secondary text-xs px-3 sm:px-4 py-2 hidden sm:inline-flex">
+          <i class="fa-solid fa-upload"></i> Upload
+        </a>
+        <a href="/resume/new" class="btn-primary text-xs px-3 sm:px-4 py-2">
+          <i class="fa-solid fa-plus"></i> New Resume
+        </a>
       </div>
     </div>
 
-    <div class="px-8 py-8">
+    <div class="px-4 sm:px-8 py-6 sm:py-8">
       {% if resumes %}
-      <!-- Resume Grid -->
-      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
         {% for resume in resumes %}
-        <div class="glass-card glass-card-hover p-5 flex flex-col gap-4 resume-card" data-id="{{ resume._id }}">
+        <div class="glass-card glass-card-hover p-4 sm:p-5 flex flex-col gap-3 resume-card" data-id="{{ resume._id }}">
           <!-- Header -->
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-lg">
-                  {% if resume.template == 'google' %}🔵
-                  {% elif resume.template == 'microsoft' %}🪟
-                  {% elif resume.template == 'meta' %}🔷
-                  {% elif resume.template == 'oracle' %}🔴
-                  {% else %}📄{% endif %}
+              <div class="flex items-center gap-2 mb-1 flex-wrap">
+                <!-- Template color indicator -->
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded text-white text-xs font-bold flex-shrink-0
+                  {% if resume.template == 'google' %}bg-blue-600
+                  {% elif resume.template == 'microsoft' %}bg-blue-500
+                  {% elif resume.template == 'meta' %}bg-indigo-600
+                  {% elif resume.template == 'oracle' %}bg-red-600
+                  {% else %}bg-gray-600{% endif %}">
+                  {% if resume.template == 'google' %}G
+                  {% elif resume.template == 'microsoft' %}M
+                  {% elif resume.template == 'meta' %}M
+                  {% elif resume.template == 'oracle' %}O
+                  {% else %}?{% endif %}
                 </span>
                 <h3 class="font-semibold text-white truncate">{{ resume.title or 'Untitled Resume' }}</h3>
               </div>
@@ -68,14 +116,14 @@
               </p>
             </div>
             {% if resume.ats_score is not none %}
-            <div class="flex-shrink-0 ml-3">
-              <div class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-2
+            <div class="flex-shrink-0 ml-3 text-center">
+              <div class="w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold border-2
                 {% if resume.ats_score >= 70 %}border-emerald-500 text-emerald-400 bg-emerald-500/10
                 {% elif resume.ats_score >= 45 %}border-yellow-500 text-yellow-400 bg-yellow-500/10
                 {% else %}border-red-500 text-red-400 bg-red-500/10{% endif %}">
                 {{ resume.ats_score }}
               </div>
-              <div class="text-xs text-gray-500 text-center mt-1">ATS</div>
+              <div class="text-xs text-gray-500 mt-1">ATS</div>
             </div>
             {% endif %}
           </div>
@@ -87,29 +135,30 @@
             <span class="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs text-indigo-300">{{ skill }}</span>
             {% endfor %}
             {% if resume.skills|length > 4 %}
-            <span class="px-2 py-0.5 bg-white/5 rounded-full text-xs text-gray-500">+{{ resume.skills|length - 4 }}</span>
+            <span class="px-2 py-0.5 bg-white/5 rounded-full text-xs text-gray-500">+{{ resume.skills|length - 4 }} more</span>
             {% endif %}
           </div>
           {% endif %}
 
-          <!-- Updated time -->
           <div class="text-xs text-gray-600">
+            <i class="fa-regular fa-clock mr-1"></i>
             Updated {{ resume.updated_at.strftime('%b %d, %Y') if resume.updated_at else 'recently' }}
           </div>
 
           <!-- Actions -->
           <div class="flex items-center gap-2 pt-2 border-t border-white/5">
             <a href="/resume/{{ resume._id }}/edit"
-               class="flex-1 text-center py-2 rounded-lg text-sm font-medium bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all">
-              ✏️ Edit
+               class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all">
+              <i class="fa-solid fa-pen text-xs"></i> Edit
             </a>
             <a href="/resume/{{ resume._id }}/preview" target="_blank"
-               class="flex-1 text-center py-2 rounded-lg text-sm font-medium bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 transition-all">
-              👁 Preview
+               class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 transition-all">
+              <i class="fa-solid fa-eye text-xs"></i> Preview
             </a>
             <button onclick="deleteResume('{{ resume._id }}')"
-                    class="py-2 px-3 rounded-lg text-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all">
-              🗑
+                    class="py-2 px-3 rounded-lg text-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                    title="Delete Resume">
+              <i class="fa-solid fa-trash text-xs"></i>
             </button>
           </div>
         </div>
@@ -117,14 +166,19 @@
       </div>
 
       {% else %}
-      <!-- Empty State -->
-      <div class="flex flex-col items-center justify-center py-24 text-center">
-        <div class="text-7xl mb-6">📄</div>
-        <h2 class="text-2xl font-bold text-white mb-3">No resumes yet</h2>
-        <p class="text-gray-400 mb-8 max-w-sm">Create your first AI-powered resume or upload an existing one to get started.</p>
-        <div class="flex gap-4">
-          <a href="/resume/new" class="btn-primary px-6 py-3">✨ Create Resume</a>
-          <a href="/upload" class="btn-secondary px-6 py-3">📤 Upload Existing</a>
+      <div class="flex flex-col items-center justify-center py-20 text-center px-4">
+        <div class="w-20 h-20 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-6">
+          <i class="fa-solid fa-file-lines text-3xl text-indigo-400"></i>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-bold text-white mb-3">No resumes yet</h2>
+        <p class="text-gray-400 mb-8 max-w-sm text-sm sm:text-base">Create your first AI-powered resume or upload an existing one to get started.</p>
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <a href="/resume/new" class="btn-primary px-6 py-3 text-center">
+            <i class="fa-solid fa-plus"></i> Create Resume
+          </a>
+          <a href="/upload" class="btn-secondary px-6 py-3 text-center">
+            <i class="fa-solid fa-upload"></i> Upload Existing
+          </a>
         </div>
       </div>
       {% endif %}
@@ -135,12 +189,19 @@
 <!-- Delete confirmation modal -->
 <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
   <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
-  <div class="glass-card relative z-10 p-6 max-w-sm w-full animate-slide-up">
-    <h3 class="text-lg font-bold text-white mb-2">Delete Resume?</h3>
+  <div class="glass-card relative z-10 p-5 sm:p-6 max-w-sm w-full animate-slide-up">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white">Delete Resume?</h3>
+    </div>
     <p class="text-gray-400 text-sm mb-6">This action cannot be undone. The resume will be permanently deleted.</p>
     <div class="flex gap-3">
       <button onclick="closeDeleteModal()" class="btn-secondary flex-1 py-2.5">Cancel</button>
-      <button id="confirm-delete-btn" class="btn-danger flex-1 py-2.5 justify-center">Delete</button>
+      <button id="confirm-delete-btn" class="btn-danger flex-1 py-2.5 justify-center">
+        <i class="fa-solid fa-trash"></i> Delete
+      </button>
     </div>
   </div>
 </div>
@@ -156,17 +217,15 @@
     modal.classList.remove('hidden');
     modal.classList.add('flex');
   }
-
   function closeDeleteModal() {
-    const modal = document.getElementById('delete-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    document.getElementById('delete-modal').classList.add('hidden');
+    document.getElementById('delete-modal').classList.remove('flex');
     pendingDeleteId = null;
   }
 
-  document.getElementById('confirm-delete-btn').addEventListener('click', async function() {
+  document.getElementById('confirm-delete-btn').addEventListener('click', async function () {
     if (!pendingDeleteId) return;
-    this.textContent = 'Deleting...';
+    this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting…';
     this.disabled = true;
     try {
       const res = await fetch(`/api/resume/${pendingDeleteId}`, { method: 'DELETE' });
@@ -175,7 +234,8 @@
         if (card) { card.style.opacity = '0'; card.style.transition = 'opacity 0.3s'; setTimeout(() => card.remove(), 300); }
         closeDeleteModal();
       }
-    } catch(e) { alert('Failed to delete resume.'); }
+    } catch (e) { alert('Failed to delete resume.'); }
+    this.innerHTML = '<i class="fa-solid fa-trash"></i> Delete';
     this.disabled = false;
   });
 </script>

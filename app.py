@@ -17,6 +17,7 @@ from flask import (
     Flask, render_template, request, redirect, url_for,
     session, jsonify, flash, g
 )
+from flask.json.provider import DefaultJSONProvider
 from flask_session import Session
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -45,8 +46,22 @@ except ImportError:
 # ── Load environment ─────────────────────────────────────────────────────────
 load_dotenv()
 
+
+# ── Custom JSON Provider (Flask 3.x compatible) ──────────────────────────────
+class MongoJSONProvider(DefaultJSONProvider):
+    def default(self, obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
 # ── Flask app setup ──────────────────────────────────────────────────────────
 app = Flask(__name__)
+app.json_provider_class = MongoJSONProvider
+app.json = MongoJSONProvider(app)
+
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = True
@@ -77,16 +92,6 @@ GOOGLE_AUTH_URL      = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL     = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL  = "https://www.googleapis.com/oauth2/v2/userinfo"
 
-# ── JSON encoder for ObjectId ─────────────────────────────────────────────────
-class MongoJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, ObjectId):
-            return str(obj)
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        return super().default(obj)
-
-app.json_encoder = MongoJSONEncoder
 
 # ── Helper: safe groq call ───────────────────────────────────────────────────
 def groq_chat(messages, temperature=0.7, max_tokens=2048):
@@ -103,6 +108,7 @@ def groq_chat(messages, temperature=0.7, max_tokens=2048):
         app.logger.error(f"Groq error: {e}")
         return ""
 
+
 # ── Auth decorator ───────────────────────────────────────────────────────────
 def login_required(f):
     @wraps(f)
@@ -114,10 +120,15 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
 def get_current_user():
     if "user_id" not in session:
         return None
-    return users_col.find_one({"_id": ObjectId(session["user_id"])})
+    try:
+        return users_col.find_one({"_id": ObjectId(session["user_id"])})
+    except Exception:
+        return None
+
 
 # ── ATS domain keywords ───────────────────────────────────────────────────────
 ATS_DOMAINS = {
@@ -130,6 +141,7 @@ ATS_DOMAINS = {
     "Design": ["figma","sketch","adobe xd","ui/ux","wireframe","prototype","user research","design system","typography","color theory","photoshop","illustrator","indesign","branding","accessibility"],
     "DevOps": ["docker","kubernetes","jenkins","terraform","ansible","ci/cd","linux","bash","monitoring","prometheus","grafana","elk","nginx","aws","azure","gcp","helm","git","infrastructure"],
 }
+
 
 def compute_ats_score(resume_data, domain="Software Engineering"):
     """Compute ATS score based on keyword matching."""
@@ -173,13 +185,14 @@ def compute_ats_score(resume_data, domain="Software Engineering"):
         }
     }
 
+
 def compute_template_scores(resume_data):
     """Score resume against each company template style."""
     templates = {
-        "Google": {"weight_skills": 0.4, "weight_exp": 0.4, "weight_edu": 0.2},
+        "Google":    {"weight_skills": 0.4, "weight_exp": 0.4, "weight_edu": 0.2},
         "Microsoft": {"weight_skills": 0.3, "weight_exp": 0.5, "weight_edu": 0.2},
-        "Meta": {"weight_skills": 0.5, "weight_exp": 0.35, "weight_edu": 0.15},
-        "Oracle": {"weight_skills": 0.35, "weight_exp": 0.45, "weight_edu": 0.2},
+        "Meta":      {"weight_skills": 0.5, "weight_exp": 0.35, "weight_edu": 0.15},
+        "Oracle":    {"weight_skills": 0.35, "weight_exp": 0.45, "weight_edu": 0.2},
     }
     scores = {}
     skills_count = min(len(resume_data.get("skills", [])), 15) / 15
@@ -193,6 +206,7 @@ def compute_template_scores(resume_data):
         scores[tpl] = int(raw * 100)
     return scores
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  AUTH ROUTES
 # ══════════════════════════════════════════════════════════════════════════════
@@ -202,6 +216,7 @@ def index():
     if "user_id" in session:
         return redirect(url_for("dashboard"))
     return render_template("landing.html")
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -230,12 +245,13 @@ def register():
             "created_at": datetime.utcnow(),
         }
         result = users_col.insert_one(user)
-        session["user_id"] = str(result.inserted_id)
-        session["user_name"] = name
+        session["user_id"]    = str(result.inserted_id)
+        session["user_name"]  = name
         session["user_email"] = email
         flash("Account created successfully!", "success")
         return redirect(url_for("dashboard"))
     return render_template("register.html")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -257,10 +273,12 @@ def login():
         return redirect(url_for("dashboard"))
     return render_template("login.html")
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("index"))
+
 
 # ── Google OAuth ─────────────────────────────────────────────────────────────
 @app.route("/auth/google")
@@ -272,6 +290,7 @@ def google_login():
                                                 prompt="select_account")
     session["oauth_state"] = state
     return redirect(uri)
+
 
 @app.route("/auth/google/callback")
 def google_callback():
@@ -314,6 +333,7 @@ def google_callback():
     session["user_email"] = email
     return redirect(url_for("dashboard"))
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  DASHBOARD
 # ══════════════════════════════════════════════════════════════════════════════
@@ -328,6 +348,7 @@ def dashboard():
     user = get_current_user()
     return render_template("dashboard.html", resumes=resumes, user=user)
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  RESUME CRUD
 # ══════════════════════════════════════════════════════════════════════════════
@@ -336,6 +357,7 @@ def dashboard():
 @login_required
 def new_resume():
     return render_template("builder.html", resume=None, resume_id=None)
+
 
 @app.route("/resume/<resume_id>/edit")
 @login_required
@@ -354,35 +376,37 @@ def edit_resume(resume_id):
     resume["_id"] = str(resume["_id"])
     return render_template("builder.html", resume=resume, resume_id=resume_id)
 
+
 @app.route("/api/resume", methods=["POST"])
 @login_required
 def api_create_resume():
     data = request.get_json(silent=True) or {}
     now  = datetime.utcnow()
     resume = {
-        "user_id":     session["user_id"],
-        "title":       data.get("title", "Untitled Resume"),
-        "template":    data.get("template", "google"),
-        "full_name":   data.get("full_name", ""),
-        "email":       data.get("email", ""),
-        "phone":       data.get("phone", ""),
-        "location":    data.get("location", ""),
-        "linkedin":    data.get("linkedin", ""),
-        "github":      data.get("github", ""),
-        "website":     data.get("website", ""),
-        "summary":     data.get("summary", ""),
-        "skills":      data.get("skills", []),
-        "experience":  data.get("experience", []),
-        "education":   data.get("education", []),
-        "projects":    data.get("projects", []),
+        "user_id":        session["user_id"],
+        "title":          data.get("title", "Untitled Resume"),
+        "template":       data.get("template", "google"),
+        "full_name":      data.get("full_name", ""),
+        "email":          data.get("email", ""),
+        "phone":          data.get("phone", ""),
+        "location":       data.get("location", ""),
+        "linkedin":       data.get("linkedin", ""),
+        "github":         data.get("github", ""),
+        "website":        data.get("website", ""),
+        "summary":        data.get("summary", ""),
+        "skills":         data.get("skills", []),
+        "experience":     data.get("experience", []),
+        "education":      data.get("education", []),
+        "projects":       data.get("projects", []),
         "certifications": data.get("certifications", []),
-        "ats_score":   data.get("ats_score", None),
-        "ats_domain":  data.get("ats_domain", "Software Engineering"),
-        "created_at":  now,
-        "updated_at":  now,
+        "ats_score":      data.get("ats_score", None),
+        "ats_domain":     data.get("ats_domain", "Software Engineering"),
+        "created_at":     now,
+        "updated_at":     now,
     }
     result = resumes_col.insert_one(resume)
     return jsonify({"success": True, "resume_id": str(result.inserted_id)}), 201
+
 
 @app.route("/api/resume/<resume_id>", methods=["GET"])
 @login_required
@@ -399,6 +423,7 @@ def api_get_resume(resume_id):
     resume["_id"] = str(resume["_id"])
     return jsonify(resume)
 
+
 @app.route("/api/resume/<resume_id>", methods=["PUT"])
 @login_required
 def api_update_resume(resume_id):
@@ -414,27 +439,28 @@ def api_update_resume(resume_id):
         return jsonify({"error": "Not found"}), 404
 
     update = {
-        "title":       data.get("title", existing.get("title", "Untitled")),
-        "template":    data.get("template", existing.get("template", "google")),
-        "full_name":   data.get("full_name", existing.get("full_name", "")),
-        "email":       data.get("email", existing.get("email", "")),
-        "phone":       data.get("phone", existing.get("phone", "")),
-        "location":    data.get("location", existing.get("location", "")),
-        "linkedin":    data.get("linkedin", existing.get("linkedin", "")),
-        "github":      data.get("github", existing.get("github", "")),
-        "website":     data.get("website", existing.get("website", "")),
-        "summary":     data.get("summary", existing.get("summary", "")),
-        "skills":      data.get("skills", existing.get("skills", [])),
-        "experience":  data.get("experience", existing.get("experience", [])),
-        "education":   data.get("education", existing.get("education", [])),
-        "projects":    data.get("projects", existing.get("projects", [])),
+        "title":          data.get("title",          existing.get("title", "Untitled")),
+        "template":       data.get("template",       existing.get("template", "google")),
+        "full_name":      data.get("full_name",      existing.get("full_name", "")),
+        "email":          data.get("email",          existing.get("email", "")),
+        "phone":          data.get("phone",          existing.get("phone", "")),
+        "location":       data.get("location",       existing.get("location", "")),
+        "linkedin":       data.get("linkedin",       existing.get("linkedin", "")),
+        "github":         data.get("github",         existing.get("github", "")),
+        "website":        data.get("website",        existing.get("website", "")),
+        "summary":        data.get("summary",        existing.get("summary", "")),
+        "skills":         data.get("skills",         existing.get("skills", [])),
+        "experience":     data.get("experience",     existing.get("experience", [])),
+        "education":      data.get("education",      existing.get("education", [])),
+        "projects":       data.get("projects",       existing.get("projects", [])),
         "certifications": data.get("certifications", existing.get("certifications", [])),
-        "ats_score":   data.get("ats_score", existing.get("ats_score")),
-        "ats_domain":  data.get("ats_domain", existing.get("ats_domain", "Software Engineering")),
-        "updated_at":  datetime.utcnow(),
+        "ats_score":      data.get("ats_score",      existing.get("ats_score")),
+        "ats_domain":     data.get("ats_domain",     existing.get("ats_domain", "Software Engineering")),
+        "updated_at":     datetime.utcnow(),
     }
     resumes_col.update_one({"_id": ObjectId(resume_id)}, {"$set": update})
     return jsonify({"success": True})
+
 
 @app.route("/api/resume/<resume_id>", methods=["DELETE"])
 @login_required
@@ -450,6 +476,7 @@ def api_delete_resume(resume_id):
         return jsonify({"error": "Not found"}), 404
     return jsonify({"success": True})
 
+
 @app.route("/api/resumes", methods=["GET"])
 @login_required
 def api_list_resumes():
@@ -459,6 +486,7 @@ def api_list_resumes():
         r.pop("password", None)
     return jsonify(resumes)
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  UPLOAD & PARSE
 # ══════════════════════════════════════════════════════════════════════════════
@@ -467,6 +495,7 @@ def api_list_resumes():
 @login_required
 def upload_page():
     return render_template("upload.html")
+
 
 def extract_text_from_pdf(path):
     """Extract text from PDF using pdfminer or PyPDF2 fallback."""
@@ -488,6 +517,7 @@ def extract_text_from_pdf(path):
             pass
     return text
 
+
 def extract_text_from_docx(path):
     """Extract text from DOCX."""
     if not DOCX_AVAILABLE:
@@ -497,6 +527,7 @@ def extract_text_from_docx(path):
         return "\n".join([p.text for p in doc.paragraphs])
     except Exception:
         return ""
+
 
 @app.route("/api/upload", methods=["POST"])
 @login_required
@@ -511,10 +542,10 @@ def api_upload_resume():
     if ext not in [".pdf", ".docx"]:
         return jsonify({"error": "Only PDF and DOCX files are supported"}), 400
 
-    # Safe temp file
-    suffix = ext
+    suffix  = ext
     tmp_dir = tempfile.gettempdir()
-    tmp_path = os.path.join(tmp_dir, f"resume_upload_{session['user_id']}{suffix}")
+    user_id_safe = str(session["user_id"]).replace("/", "_")
+    tmp_path = os.path.join(tmp_dir, f"resume_upload_{user_id_safe}{suffix}")
     try:
         file.save(tmp_path)
         if ext == ".pdf":
@@ -530,7 +561,6 @@ def api_upload_resume():
     if not raw_text or not raw_text.strip():
         return jsonify({"error": "Could not extract text from file"}), 422
 
-    # Use Groq to parse the text into structured JSON
     prompt = f"""You are a resume parser. Extract information from the following resume text and return ONLY valid JSON (no markdown, no explanation).
 
 The JSON must have exactly these fields:
@@ -580,7 +610,6 @@ Resume text:
     parsed_text = groq_chat([{"role": "user", "content": prompt}], temperature=0.1, max_tokens=2000)
 
     try:
-        # Strip markdown code fences if present
         cleaned = parsed_text.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.split("```")[1]
@@ -597,6 +626,7 @@ Resume text:
 
     return jsonify({"success": True, "data": parsed}), 200
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  ATS SCORING
 # ══════════════════════════════════════════════════════════════════════════════
@@ -609,7 +639,6 @@ def api_ats_score():
     result = compute_ats_score(data, domain)
     result["template_scores"] = compute_template_scores(data)
 
-    # Save score to DB if resume_id provided
     resume_id = data.get("resume_id")
     if resume_id:
         try:
@@ -627,6 +656,7 @@ def api_ats_score():
 
     return jsonify(result)
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  AI SUGGESTIONS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -638,7 +668,7 @@ def api_ai_suggestions():
     domain = data.get("domain", "Software Engineering")
     skills = data.get("skills", [])
 
-    ats    = compute_ats_score(data, domain)
+    ats     = compute_ats_score(data, domain)
     missing = ats.get("missing_keywords", [])
 
     prompt = f"""You are a professional resume coach for the {domain} domain.
@@ -649,7 +679,7 @@ Given this resume summary:
 Skills already present: {', '.join(skills[:20]) if skills else 'None'}
 Missing ATS keywords: {', '.join(missing)}
 
-Provide exactly 3 concise, actionable improvement suggestions (one sentence each) and list 8 specific skills to add. 
+Provide exactly 3 concise, actionable improvement suggestions (one sentence each) and list 8 specific skills to add.
 Return ONLY valid JSON:
 {{
   "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
@@ -677,6 +707,7 @@ Return ONLY valid JSON:
 
     result["missing_keywords"] = missing
     return jsonify(result)
+
 
 # ── AI section rewrite ────────────────────────────────────────────────────────
 @app.route("/api/ai/rewrite", methods=["POST"])
@@ -732,6 +763,7 @@ Return ONLY the improved text, no explanations.""",
 
     return jsonify({"rewritten": result})
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  STATIC TEMPLATE PREVIEW
 # ══════════════════════════════════════════════════════════════════════════════
@@ -751,6 +783,7 @@ def preview_resume(resume_id):
     resume["_id"] = str(resume["_id"])
     return render_template("preview.html", resume=resume)
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  ERROR HANDLERS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -759,9 +792,11 @@ def preview_resume(resume_id):
 def not_found(e):
     return render_template("error.html", code=404, message="Page not found"), 404
 
+
 @app.errorhandler(500)
 def server_error(e):
     return render_template("error.html", code=500, message="Internal server error"), 500
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  MAIN

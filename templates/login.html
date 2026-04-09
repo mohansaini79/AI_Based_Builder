@@ -2,16 +2,15 @@
 {% block title %}Sign In – ResumeAI{% endblock %}
 
 {% block body %}
-<div class="min-h-screen hero-gradient flex items-center justify-center px-4 py-12">
-  <!-- Glow orbs -->
-  <div class="glow-dot w-72 h-72 bg-indigo-600/20 top-10 left-10 fixed"></div>
-  <div class="glow-dot w-60 h-60 bg-purple-600/15 bottom-10 right-10 fixed"></div>
+<div class="min-h-screen hero-gradient flex items-center justify-center px-4 py-10">
+  <div class="glow-dot w-72 h-72 bg-indigo-600/20 top-10 left-10 fixed pointer-events-none"></div>
+  <div class="glow-dot w-60 h-60 bg-purple-600/15 bottom-10 right-10 fixed pointer-events-none"></div>
 
   <div class="w-full max-w-md relative z-10 animate-slide-up">
     <!-- Logo -->
     <div class="text-center mb-8">
       <a href="/" class="inline-flex items-center gap-2 font-bold text-2xl">
-        <span class="text-3xl">⚡</span>
+        <i class="fa-solid fa-bolt text-yellow-400 text-3xl"></i>
         <span class="gradient-text-brand">ResumeAI</span>
       </a>
       <h1 class="text-2xl font-bold mt-6 mb-1 text-white">Welcome back</h1>
@@ -19,7 +18,7 @@
     </div>
 
     <!-- Card -->
-    <div class="glass-card p-8">
+    <div class="glass-card p-6 sm:p-8">
       <!-- Google OAuth -->
       <a href="/auth/google" id="google-login-btn"
          class="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-200 font-medium text-sm text-gray-200 mb-6">
@@ -38,33 +37,39 @@
         <div class="flex-1 h-px bg-white/8"></div>
       </div>
 
-      <!-- Login Form -->
       <form id="login-form" method="POST" action="/login" class="space-y-4">
         <div>
-          <label class="form-label" for="email">Email address</label>
+          <label class="form-label" for="email">
+            <i class="fa-solid fa-envelope text-gray-500 mr-1"></i> Email address
+          </label>
           <input id="email" name="email" type="email" required autocomplete="email"
                  class="form-input" placeholder="you@example.com" />
         </div>
         <div>
-          <label class="form-label" for="password">Password</label>
+          <label class="form-label" for="password">
+            <i class="fa-solid fa-lock text-gray-500 mr-1"></i> Password
+          </label>
           <div class="relative">
             <input id="password" name="password" type="password" required autocomplete="current-password"
                    class="form-input pr-10" placeholder="••••••••" />
             <button type="button" id="toggle-password"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-sm"
-                    aria-label="Toggle password visibility">👁</button>
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                    aria-label="Toggle password visibility">
+              <i id="pwd-toggle-icon" class="fa-solid fa-eye text-sm"></i>
+            </button>
           </div>
         </div>
-
         <button id="login-submit-btn" type="submit" class="btn-primary w-full py-3 mt-2">
-          Sign In
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In
         </button>
       </form>
     </div>
 
     <p class="text-center text-gray-500 text-sm mt-6">
       Don't have an account?
-      <a href="/register" class="text-indigo-400 hover:text-indigo-300 font-medium ml-1">Create one free →</a>
+      <a href="/register" class="text-indigo-400 hover:text-indigo-300 font-medium ml-1">
+        Create one free <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
     </p>
   </div>
 </div>
@@ -72,14 +77,20 @@
 
 {% block extra_scripts %}
 <script>
-  document.getElementById('toggle-password').addEventListener('click', function() {
-    const pwd = document.getElementById('password');
-    pwd.type = pwd.type === 'password' ? 'text' : 'password';
+  const pwdInput  = document.getElementById('password');
+  const pwdToggle = document.getElementById('toggle-password');
+  const pwdIcon   = document.getElementById('pwd-toggle-icon');
+
+  pwdToggle.addEventListener('click', function () {
+    const isHidden = pwdInput.type === 'password';
+    pwdInput.type  = isHidden ? 'text' : 'password';
+    pwdIcon.className = isHidden ? 'fa-solid fa-eye-slash text-sm' : 'fa-solid fa-eye text-sm';
   });
-  document.getElementById('login-form').addEventListener('submit', function() {
+
+  document.getElementById('login-form').addEventListener('submit', function () {
     const btn = document.getElementById('login-submit-btn');
-    btn.innerHTML = '<div class="spinner"></div> Signing in...';
-    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in…';
+    btn.disabled  = true;
   });
 </script>
 {% endblock %}

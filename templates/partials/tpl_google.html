@@ -3,12 +3,12 @@
 <div class="g-header avoid-break">
   <div class="g-name">{{ r.full_name or 'Your Name' }}</div>
   <div class="g-contact">
-    {% if r.email %}<span>✉ {{ r.email }}</span>{% endif %}
-    {% if r.phone %}<span>📞 {{ r.phone }}</span>{% endif %}
-    {% if r.location %}<span>📍 {{ r.location }}</span>{% endif %}
-    {% if r.linkedin %}<a href="{{ r.linkedin }}" target="_blank">🔗 LinkedIn</a>{% endif %}
-    {% if r.github %}<a href="{{ r.github }}" target="_blank">💻 GitHub</a>{% endif %}
-    {% if r.website %}<a href="{{ r.website }}" target="_blank">🌐 Website</a>{% endif %}
+    {% if r.email %}<span>{{ r.email }}</span>{% endif %}
+    {% if r.phone %}<span>{{ r.phone }}</span>{% endif %}
+    {% if r.location %}<span>{{ r.location }}</span>{% endif %}
+    {% if r.linkedin %}<a href="{{ r.linkedin }}" target="_blank">LinkedIn</a>{% endif %}
+    {% if r.github %}<a href="{{ r.github }}" target="_blank">GitHub</a>{% endif %}
+    {% if r.website %}<a href="{{ r.website }}" target="_blank">{{ r.website }}</a>{% endif %}
   </div>
 </div>
 
@@ -30,7 +30,7 @@
       <div class="g-entry-sub">{{ exp.company or '' }}</div>
       <div class="g-entry-meta">
         {% if exp.duration %}{{ exp.duration }}{% endif %}
-        {% if exp.location %} · {{ exp.location }}{% endif %}
+        {% if exp.location %} &middot; {{ exp.location }}{% endif %}
       </div>
       {% if exp.description %}<div class="g-entry-desc">{{ exp.description | striptags }}</div>{% endif %}
     </div>
@@ -42,7 +42,7 @@
     {% for proj in r.projects %}
     <div class="g-entry avoid-break">
       <div class="g-entry-title">{{ proj.title or '' }}
-        {% if proj.link %}<a href="{{ proj.link }}" style="font-size:10px;color:#1a73e8;font-weight:400;margin-left:6px;">↗ Link</a>{% endif %}
+        {% if proj.link %}<a href="{{ proj.link }}" style="font-size:10px;color:#1a73e8;font-weight:400;margin-left:6px;">&nearr; Link</a>{% endif %}
       </div>
       {% if proj.technologies %}<div class="g-entry-sub">{{ proj.technologies }}</div>{% endif %}
       {% if proj.description %}<div class="g-entry-desc">{{ proj.description | striptags }}</div>{% endif %}
@@ -64,7 +64,7 @@
     <div class="g-entry avoid-break">
       <div class="g-entry-title">{{ edu.degree or '' }}</div>
       <div class="g-entry-sub">{{ edu.institution or '' }}</div>
-      <div class="g-entry-meta">{{ edu.year or '' }}{% if edu.gpa %} · GPA: {{ edu.gpa }}{% endif %}</div>
+      <div class="g-entry-meta">{{ edu.year or '' }}{% if edu.gpa %} &middot; GPA: {{ edu.gpa }}{% endif %}</div>
     </div>
     {% endfor %}
     {% endif %}

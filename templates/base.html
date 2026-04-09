@@ -31,12 +31,12 @@
             sans: ['Inter', 'system-ui', 'sans-serif'],
           },
           animation: {
-            'fade-in': 'fadeIn 0.4s ease-out',
-            'slide-up': 'slideUp 0.5s ease-out',
+            'fade-in':    'fadeIn 0.4s ease-out',
+            'slide-up':   'slideUp 0.5s ease-out',
             'pulse-slow': 'pulse 3s infinite',
           },
           keyframes: {
-            fadeIn: { from: { opacity: '0' }, to: { opacity: '1' } },
+            fadeIn:  { from: { opacity: '0' },                           to: { opacity: '1' } },
             slideUp: { from: { opacity: '0', transform: 'translateY(20px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
           }
         }
@@ -49,6 +49,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
+  <!-- Font Awesome 6 Free -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
 
@@ -56,20 +59,23 @@
 </head>
 <body class="h-full bg-gray-950 text-gray-100 font-sans antialiased">
 
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
+
   <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div id="flash-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+      <div id="flash-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
         {% for category, message in messages %}
-          <div class="flash-msg flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border animate-fade-in
+          <div class="flash-msg flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border animate-fade-in pointer-events-auto
             {% if category == 'error' %}bg-red-900/90 border-red-700 text-red-100
             {% elif category == 'success' %}bg-emerald-900/90 border-emerald-700 text-emerald-100
             {% else %}bg-blue-900/90 border-blue-700 text-blue-100{% endif %}">
-            <span class="text-lg">
+            <span class="text-lg flex-shrink-0">
               {% if category == 'error' %}⚠️{% elif category == 'success' %}✅{% else %}ℹ️{% endif %}
             </span>
             <span class="text-sm font-medium">{{ message }}</span>
-            <button onclick="this.parentElement.remove()" class="ml-auto opacity-60 hover:opacity-100 text-lg">×</button>
+            <button onclick="this.parentElement.remove()" class="ml-auto opacity-60 hover:opacity-100 text-lg flex-shrink-0">×</button>
           </div>
         {% endfor %}
       </div>
@@ -88,6 +94,9 @@
       });
     }, 4000);
   </script>
+
+  <!-- Global app JS -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
   {% block extra_scripts %}{% endblock %}
 </body>

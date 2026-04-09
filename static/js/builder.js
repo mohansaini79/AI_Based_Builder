@@ -3,22 +3,24 @@
    ============================================================ */
 
 // ── State ─────────────────────────────────────────────────────
-let currentTemplate = 'google';
-let summaryEditor   = null;
-let skills          = [];
-let experience      = [];
-let education       = [];
-let projects        = [];
-let certifications  = [];
-let rewriteSection  = null;
-let rewriteResult   = '';
+let currentTemplate      = 'google';
+let summaryEditor        = null;
+let skills               = [];
+let experience           = [];
+let education            = [];
+let projects             = [];
+let certifications       = [];
+// NOTE: renamed from 'rewriteSection' to avoid conflict with the function below
+let activeRewriteSection = null;
+let rewriteResult        = '';
 
 // ── Init ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   initQuill();
   loadResumeData();
   initSkillInput();
   updatePreview();
+  initRightPanelToggle();   // from app.js
 
   // Auto-save every 60s
   setInterval(() => { if (window.RESUME_ID) saveResume(true); }, 60000);
@@ -36,7 +38,7 @@ function initQuill() {
     placeholder: 'Write a compelling 3–4 sentence professional summary...',
     modules: {
       toolbar: [
-        ['bold','italic','underline'],
+        ['bold', 'italic', 'underline'],
         [{ list: 'ordered' }, { list: 'bullet' }],
         ['clean']
       ]
@@ -51,7 +53,7 @@ function loadResumeData() {
   if (!rd || !Object.keys(rd).length) return;
 
   // Basic fields
-  const basicFields = ['full_name','email','phone','location','linkedin','github','website'];
+  const basicFields = ['full_name', 'email', 'phone', 'location', 'linkedin', 'github', 'website'];
   basicFields.forEach(f => {
     const el = document.getElementById(`f-${f}`);
     if (el && rd[f]) el.value = rd[f];
@@ -102,8 +104,11 @@ function loadResumeData() {
   // ATS score
   if (rd.ats_score !== null && rd.ats_score !== undefined) {
     updateATSRing(rd.ats_score);
-    document.getElementById('ats-label').textContent = getScoreLabel(rd.ats_score);
-    document.getElementById('ats-label').className = `text-sm font-semibold ${getScoreColor(rd.ats_score)}`;
+    const lbl = document.getElementById('ats-label');
+    if (lbl) {
+      lbl.textContent = getScoreLabel(rd.ats_score);
+      lbl.className   = `text-sm font-semibold ${getScoreColor(rd.ats_score)}`;
+    }
   }
 
   updatePreview();
@@ -113,23 +118,21 @@ function loadResumeData() {
 function switchTab(section) {
   document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.builder-tab').forEach(b => b.classList.remove('active'));
-  const panel = document.getElementById(`tab-${section}`);
+  const panel  = document.getElementById(`tab-${section}`);
   const navBtn = document.getElementById(`nav-${section}`);
-  if (panel) panel.classList.add('active');
+  if (panel)  panel.classList.add('active');
   if (navBtn) navBtn.classList.add('active');
   updatePreview();
 }
 
-// Activate first tab
+// Activate first tab on load
 switchTab('basics');
 
 // ── Template Selection ────────────────────────────────────────
 function selectTemplate(tpl) {
   currentTemplate = tpl;
-  document.querySelectorAll('[id^="tpl-"]').forEach(btn => {
-    btn.classList.remove('selected');
-  });
-  const btn = document.getElementById(`tpl-${tpl}`);
+  document.querySelectorAll('[id^="tpl-btn-"]').forEach(btn => btn.classList.remove('selected'));
+  const btn = document.getElementById(`tpl-btn-${tpl}`);
   if (btn) btn.classList.add('selected');
   updatePreview();
 }
@@ -137,9 +140,10 @@ function selectTemplate(tpl) {
 // ── Skill Management ──────────────────────────────────────────
 function initSkillInput() {
   const input = document.getElementById('skill-input');
-  input.addEventListener('keydown', function(e) {
+  if (!input) return;
+  input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); addSkillTag(); }
-    if (e.key === ',' )    { e.preventDefault(); addSkillTag(); }
+    if (e.key === ',')     { e.preventDefault(); addSkillTag(); }
   });
 }
 
@@ -162,11 +166,12 @@ function removeSkill(idx) {
 
 function renderSkills() {
   const container = document.getElementById('skills-container');
+  if (!container) return;
   container.innerHTML = '';
   skills.forEach((s, i) => {
     const chip = document.createElement('span');
     chip.className = 'skill-chip';
-    chip.innerHTML = `${s} <button onclick="removeSkill(${i})" class="ml-1 opacity-60 hover:opacity-100" aria-label="Remove ${s}">×</button>`;
+    chip.innerHTML = `${escHtml(s)} <button onclick="removeSkill(${i})" class="ml-1 opacity-60 hover:opacity-100" aria-label="Remove ${escHtml(s)}">×</button>`;
     container.appendChild(chip);
   });
 }
@@ -190,12 +195,13 @@ function removeExperience(idx) {
 
 function renderExperience() {
   const container = document.getElementById('experience-list');
+  if (!container) return;
   container.innerHTML = '';
   experience.forEach((exp, i) => {
     const card = document.createElement('div');
     card.className = 'entry-card';
     card.innerHTML = `
-      <div class="grid grid-cols-2 gap-3 mb-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
           <label class="form-label">Job Title</label>
           <input class="form-input" type="text" value="${escHtml(exp.title)}"
@@ -220,7 +226,7 @@ function renderExperience() {
       <div class="mb-2">
         <div class="flex items-center justify-between mb-1">
           <label class="form-label">Description</label>
-          <button onclick="rewriteSectionEntry('experience',${i})" class="text-xs text-indigo-400 hover:text-indigo-300">🤖 AI Rewrite</button>
+          <button onclick="openRewriteEntry('experience',${i})" class="text-xs text-indigo-400 hover:text-indigo-300">🤖 AI Rewrite</button>
         </div>
         <textarea class="form-input" rows="3"
                   oninput="experience[${i}].description=this.value;updatePreview()"
@@ -252,13 +258,14 @@ function removeEducation(idx) {
 
 function renderEducation() {
   const container = document.getElementById('education-list');
+  if (!container) return;
   container.innerHTML = '';
   education.forEach((edu, i) => {
     const card = document.createElement('div');
     card.className = 'entry-card';
     card.innerHTML = `
-      <div class="grid grid-cols-2 gap-3 mb-2">
-        <div class="col-span-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+        <div class="sm:col-span-2">
           <label class="form-label">Degree / Qualification</label>
           <input class="form-input" type="text" value="${escHtml(edu.degree)}"
                  oninput="education[${i}].degree=this.value;updatePreview()" placeholder="B.S. Computer Science" />
@@ -305,12 +312,13 @@ function removeProject(idx) {
 
 function renderProjects() {
   const container = document.getElementById('projects-list');
+  if (!container) return;
   container.innerHTML = '';
   projects.forEach((proj, i) => {
     const card = document.createElement('div');
     card.className = 'entry-card';
     card.innerHTML = `
-      <div class="grid grid-cols-2 gap-3 mb-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
           <label class="form-label">Project Title</label>
           <input class="form-input" type="text" value="${escHtml(proj.title)}"
@@ -321,7 +329,7 @@ function renderProjects() {
           <input class="form-input" type="text" value="${escHtml(proj.technologies)}"
                  oninput="projects[${i}].technologies=this.value;updatePreview()" placeholder="Python, React, OpenAI" />
         </div>
-        <div class="col-span-2">
+        <div class="sm:col-span-2">
           <label class="form-label">Live / Repo Link</label>
           <input class="form-input" type="url" value="${escHtml(proj.link)}"
                  oninput="projects[${i}].link=this.value" placeholder="https://github.com/..." />
@@ -330,7 +338,7 @@ function renderProjects() {
       <div class="mb-2">
         <div class="flex items-center justify-between mb-1">
           <label class="form-label">Description</label>
-          <button onclick="rewriteSectionEntry('projects',${i})" class="text-xs text-indigo-400 hover:text-indigo-300">🤖 AI Rewrite</button>
+          <button onclick="openRewriteEntry('projects',${i})" class="text-xs text-indigo-400 hover:text-indigo-300">🤖 AI Rewrite</button>
         </div>
         <textarea class="form-input" rows="3"
                   oninput="projects[${i}].description=this.value;updatePreview()"
@@ -357,6 +365,7 @@ function removeCertification(idx) {
 
 function renderCertifications() {
   const container = document.getElementById('certifications-list');
+  if (!container) return;
   container.innerHTML = '';
   certifications.forEach((cert, i) => {
     const card = document.createElement('div');
@@ -375,21 +384,21 @@ function renderCertifications() {
 // ── Collect Form Data ─────────────────────────────────────────
 function collectFormData() {
   return {
-    title:       document.getElementById('resume-title').value.trim() || 'Untitled Resume',
-    template:    currentTemplate,
-    full_name:   (document.getElementById('f-full_name')  || {}).value || '',
-    email:       (document.getElementById('f-email')      || {}).value || '',
-    phone:       (document.getElementById('f-phone')      || {}).value || '',
-    location:    (document.getElementById('f-location')   || {}).value || '',
-    linkedin:    (document.getElementById('f-linkedin')   || {}).value || '',
-    github:      (document.getElementById('f-github')     || {}).value || '',
-    website:     (document.getElementById('f-website')    || {}).value || '',
-    summary:     summaryEditor ? summaryEditor.root.innerHTML : '',
-    ats_domain:  (document.getElementById('f-ats_domain') || {}).value || 'Software Engineering',
-    skills:      [...skills],
-    experience:  experience.map(e => ({ ...e })),
-    education:   education.map(e => ({ ...e })),
-    projects:    projects.map(p => ({ ...p })),
+    title:          (document.getElementById('resume-title') || {}).value?.trim() || 'Untitled Resume',
+    template:       currentTemplate,
+    full_name:      (document.getElementById('f-full_name')  || {}).value || '',
+    email:          (document.getElementById('f-email')      || {}).value || '',
+    phone:          (document.getElementById('f-phone')      || {}).value || '',
+    location:       (document.getElementById('f-location')   || {}).value || '',
+    linkedin:       (document.getElementById('f-linkedin')   || {}).value || '',
+    github:         (document.getElementById('f-github')     || {}).value || '',
+    website:        (document.getElementById('f-website')    || {}).value || '',
+    summary:        summaryEditor ? summaryEditor.root.innerHTML : '',
+    ats_domain:     (document.getElementById('f-ats_domain') || {}).value || 'Software Engineering',
+    skills:         [...skills],
+    experience:     experience.map(e => ({ ...e })),
+    education:      education.map(e => ({ ...e })),
+    projects:       projects.map(p => ({ ...p })),
     certifications: [...certifications],
   };
 }
@@ -397,11 +406,11 @@ function collectFormData() {
 // ── Save ──────────────────────────────────────────────────────
 async function saveResume(silent = false) {
   const btn = document.getElementById('save-btn');
-  if (!silent) { btn.innerHTML = '<div class="spinner"></div>'; btn.disabled = true; }
+  if (!silent && btn) { btn.innerHTML = '<div class="spinner" style="display:inline-block;"></div>'; btn.disabled = true; }
 
   const data = collectFormData();
   try {
-    let res, rid;
+    let res;
     if (window.RESUME_ID) {
       res = await fetch(`/api/resume/${window.RESUME_ID}`, {
         method: 'PUT',
@@ -420,21 +429,23 @@ async function saveResume(silent = false) {
         history.replaceState(null, '', `/resume/${json.resume_id}/edit`);
       }
     }
-    if (!silent && res.ok) { btn.innerHTML = '✅ Saved'; setTimeout(() => btn.innerHTML = '💾 Save', 2000); }
-  } catch(e) {
-    if (!silent) { btn.innerHTML = '❌ Error'; }
+    if (!silent && res.ok && btn) {
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
+      setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">Save</span>'; }, 2500);
+    }
+  } catch (e) {
+    if (!silent && btn) { btn.innerHTML = '❌ Error'; }
   } finally {
-    if (!silent) btn.disabled = false;
+    if (!silent && btn) btn.disabled = false;
   }
 }
 
 // ── ATS Score ─────────────────────────────────────────────────
 async function runATSScore() {
   const btn = document.getElementById('ai-score-btn');
-  btn.innerHTML = '<div class="spinner"></div>';
-  btn.disabled  = true;
+  if (btn) { btn.innerHTML = '<div class="spinner" style="display:inline-block;"></div>'; btn.disabled = true; }
 
-  const data    = collectFormData();
+  const data     = collectFormData();
   data.resume_id = window.RESUME_ID;
 
   try {
@@ -447,35 +458,44 @@ async function runATSScore() {
 
     // Score ring
     updateATSRing(json.score);
-    const label   = document.getElementById('ats-label');
-    label.textContent = getScoreLabel(json.score);
-    label.className   = `text-sm font-semibold ${getScoreColor(json.score)}`;
-    document.getElementById('ats-domain-label').textContent = json.domain || '';
+    const label = document.getElementById('ats-label');
+    if (label) {
+      label.textContent = getScoreLabel(json.score);
+      label.className   = `text-sm font-semibold ${getScoreColor(json.score)}`;
+    }
+    const domLbl = document.getElementById('ats-domain-label');
+    if (domLbl) domLbl.textContent = json.domain || '';
 
     // Template scores
     const tplPanel = document.getElementById('template-scores');
-    tplPanel.classList.remove('hidden');
+    if (tplPanel) tplPanel.classList.remove('hidden');
     const tscores = json.template_scores || {};
-    ['google','microsoft','meta','oracle'].forEach(t => {
-      const sc = tscores[t.charAt(0).toUpperCase() + t.slice(1)] || 0;
+    ['google', 'microsoft', 'meta', 'oracle'].forEach(t => {
+      const sc  = tscores[t.charAt(0).toUpperCase() + t.slice(1)] || 0;
       const bar = document.getElementById(`tpl-score-${t}`);
       const num = document.getElementById(`tpl-score-${t}-num`);
       if (bar) bar.style.width = `${sc}%`;
-      if (num) num.textContent  = sc;
+      if (num) num.textContent = sc;
     });
 
     // Missing keywords
     const mkPanel = document.getElementById('missing-kw-panel');
     const mkChips = document.getElementById('missing-kw-chips');
-    if (json.missing_keywords && json.missing_keywords.length) {
+    if (json.missing_keywords && json.missing_keywords.length && mkPanel && mkChips) {
       mkPanel.classList.remove('hidden');
       mkChips.innerHTML = '';
       json.missing_keywords.forEach(kw => {
         const chip = document.createElement('span');
         chip.className = 'skill-chip cursor-pointer';
-        chip.textContent = `+ ${kw}`;
         chip.title = 'Click to add to skills';
-        chip.onclick = () => { skills.push(kw); renderSkills(); updatePreview(); chip.classList.add('added'); chip.textContent = `✓ ${kw}`; };
+        chip.innerHTML = `<i class="fa-solid fa-plus text-xs"></i> ${escHtml(kw)}`;
+        chip.onclick = () => {
+          skills.push(kw);
+          renderSkills();
+          updatePreview();
+          chip.classList.add('added');
+          chip.innerHTML = `<i class="fa-solid fa-check text-xs"></i> ${escHtml(kw)}`;
+        };
         mkChips.appendChild(chip);
       });
     }
@@ -483,11 +503,10 @@ async function runATSScore() {
     // AI Suggestions
     await fetchAISuggestions(data);
 
-  } catch(e) {
+  } catch (e) {
     console.error('ATS score error', e);
   } finally {
-    btn.innerHTML = '📊 ATS Score';
-    btn.disabled  = false;
+    if (btn) { btn.innerHTML = '<i class="fa-solid fa-chart-bar"></i> ATS'; btn.disabled = false; }
   }
 }
 
@@ -501,7 +520,7 @@ async function fetchAISuggestions(data) {
     const json = await res.json();
     const panel = document.getElementById('ai-suggestions-panel');
     const list  = document.getElementById('ai-suggestions-list');
-    if (json.suggestions && json.suggestions.length) {
+    if (json.suggestions && json.suggestions.length && panel && list) {
       panel.classList.remove('hidden');
       list.innerHTML = json.suggestions.map(s =>
         `<div class="flex items-start gap-2 text-xs text-gray-300">
@@ -510,29 +529,30 @@ async function fetchAISuggestions(data) {
         </div>`
       ).join('');
     }
-    // Show suggested skills
     if (json.skills_to_add && json.skills_to_add.length) {
-      const sp     = document.getElementById('skill-suggestions-panel');
-      const slist  = document.getElementById('suggested-skills');
-      sp.classList.remove('hidden');
-      slist.innerHTML = '';
-      json.skills_to_add.forEach(sk => {
-        if (skills.includes(sk)) return;
-        const chip = document.createElement('span');
-        chip.className = 'skill-chip cursor-pointer';
-        chip.textContent = `+ ${sk}`;
-        chip.onclick = () => {
-          skills.push(sk);
-          renderSkills();
-          updatePreview();
-          chip.classList.add('added');
-          chip.textContent = `✓ ${sk}`;
-          chip.onclick = null;
-        };
-        slist.appendChild(chip);
-      });
+      const sp    = document.getElementById('skill-suggestions-panel');
+      const slist = document.getElementById('suggested-skills');
+      if (sp && slist) {
+        sp.classList.remove('hidden');
+        slist.innerHTML = '';
+        json.skills_to_add.forEach(sk => {
+          if (skills.includes(sk)) return;
+          const chip = document.createElement('span');
+          chip.className = 'skill-chip cursor-pointer';
+          chip.textContent = `+ ${sk}`;
+          chip.onclick = () => {
+            skills.push(sk);
+            renderSkills();
+            updatePreview();
+            chip.classList.add('added');
+            chip.textContent = `✓ ${sk}`;
+            chip.onclick = null;
+          };
+          slist.appendChild(chip);
+        });
+      }
     }
-  } catch(e) {}
+  } catch (e) { /* silent */ }
 }
 
 // ── ATS Ring ──────────────────────────────────────────────────
@@ -540,9 +560,12 @@ function updateATSRing(score) {
   const ring = document.getElementById('ats-ring-fill');
   const num  = document.getElementById('ats-score-num');
   if (!ring || !num) return;
-  const pct  = Math.min(Math.max(score || 0, 0), 100);
-  const circumference = 2 * Math.PI * 40; // ≈ 251.2
-  ring.style.strokeDashoffset = circumference * (1 - pct / 100);
+  const pct = Math.min(Math.max(score || 0, 0), 100);
+  // Use circumference set by builder.html (r=38 → 238.76) or fallback
+  const circ = window._atsCircumference || 251.2;
+  ring.style.strokeDashoffset = circ * (1 - pct / 100);
+  // Also set the dasharray in case it wasn't set via HTML
+  ring.setAttribute('stroke-dasharray', circ);
   num.textContent = pct;
 }
 
@@ -559,21 +582,26 @@ function getScoreColor(s) {
   return 'text-red-400';
 }
 
-// ── AI Rewrite (summary/skills) ────────────────────────────────
-async function rewriteSection(sectionName) {
-  rewriteSection = sectionName;
+// ── AI Rewrite (summary section or skills) ────────────────────
+async function openRewriteSection(sectionName) {
+  activeRewriteSection = sectionName;
   const overlay = document.getElementById('rewrite-overlay');
   const title   = document.getElementById('rewrite-title');
   const result  = document.getElementById('rewrite-result');
+  if (!overlay || !title || !result) return;
+
   title.textContent = `🤖 AI Rewrite – ${sectionName.charAt(0).toUpperCase() + sectionName.slice(1)}`;
   result.innerHTML  = '<div class="flex items-center gap-2 text-gray-400"><div class="spinner"></div> Generating...</div>';
   overlay.classList.remove('hidden');
   overlay.classList.add('flex');
+  // clear entry context so applyRewrite knows it's a top-level section
+  delete overlay.dataset.entryType;
+  delete overlay.dataset.entryIndex;
 
   const data = collectFormData();
   let content = '', context = '';
-  if (sectionName === 'summary')  { content = data.summary; context = data.full_name + ' at ' + (data.experience[0]?.company || ''); }
-  if (sectionName === 'skills')   { content = data.skills.join(', '); context = data.ats_domain; }
+  if (sectionName === 'summary') { content = data.summary; context = data.full_name + ' at ' + (data.experience[0]?.company || ''); }
+  if (sectionName === 'skills')  { content = data.skills.join(', '); context = data.ats_domain; }
 
   try {
     const res  = await fetch('/api/ai/rewrite', {
@@ -584,16 +612,19 @@ async function rewriteSection(sectionName) {
     const json = await res.json();
     rewriteResult = json.rewritten || '';
     result.textContent = rewriteResult;
-  } catch(e) {
+  } catch (e) {
     result.textContent = 'Failed to generate. Please try again.';
   }
 }
 
-async function rewriteSectionEntry(type, idx) {
-  rewriteSection = type;
+// ── AI Rewrite (experience / project entry) ───────────────────
+async function openRewriteEntry(type, idx) {
+  activeRewriteSection = type;
   const overlay = document.getElementById('rewrite-overlay');
   const title   = document.getElementById('rewrite-title');
   const result  = document.getElementById('rewrite-result');
+  if (!overlay || !title || !result) return;
+
   title.textContent = `🤖 AI Rewrite – ${type === 'experience' ? 'Experience' : 'Project'}`;
   result.innerHTML  = '<div class="flex items-center gap-2 text-gray-400"><div class="spinner"></div> Generating...</div>';
   overlay.classList.remove('hidden');
@@ -616,13 +647,12 @@ async function rewriteSectionEntry(type, idx) {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ section: type === 'experience' ? 'experience' : 'projects', content, context })
     });
-    const json    = await res.json();
+    const json = await res.json();
     rewriteResult = json.rewritten || '';
-    // Store index for apply
     overlay.dataset.entryType  = type;
     overlay.dataset.entryIndex = idx;
     result.textContent = rewriteResult;
-  } catch(e) {
+  } catch (e) {
     result.textContent = 'Failed to generate. Please try again.';
   }
 }
@@ -638,9 +668,9 @@ function applyRewrite() {
   } else if (type === 'projects' && !isNaN(idx)) {
     projects[idx].description = rewriteResult;
     renderProjects();
-  } else if (rewriteSection === 'summary') {
+  } else if (activeRewriteSection === 'summary') {
     if (summaryEditor) summaryEditor.root.innerHTML = rewriteResult;
-  } else if (rewriteSection === 'skills') {
+  } else if (activeRewriteSection === 'skills') {
     const newSkills = rewriteResult.split(',').map(s => s.trim()).filter(Boolean);
     skills = [...new Set([...skills, ...newSkills])];
     renderSkills();
@@ -651,10 +681,11 @@ function applyRewrite() {
 
 function closeRewriteModal() {
   const overlay = document.getElementById('rewrite-overlay');
+  if (!overlay) return;
   overlay.classList.add('hidden');
   overlay.classList.remove('flex');
-  rewriteSection = null;
-  rewriteResult  = '';
+  activeRewriteSection = null;
+  rewriteResult = '';
 }
 
 // ── Live Preview ──────────────────────────────────────────────
@@ -667,27 +698,27 @@ function updatePreview() {
 }
 
 function generatePreviewHTML(d) {
-  const t = d.template || 'google';
-  const safeName    = escHtml(d.full_name || 'Your Name');
-  const safeEmail   = escHtml(d.email   || '');
-  const safePhone   = escHtml(d.phone   || '');
-  const safeLoc     = escHtml(d.location || '');
-  const safeSummary = d.summary ? d.summary.replace(/<[^>]*>/g,'').substring(0,300) : '';
+  const t          = d.template || 'google';
+  const safeName   = escHtml(d.full_name || 'Your Name');
+  const safeEmail  = escHtml(d.email    || '');
+  const safePhone  = escHtml(d.phone    || '');
+  const safeLoc    = escHtml(d.location || '');
+  const safeSummary = d.summary ? d.summary.replace(/<[^>]*>/g, '').substring(0, 300) : '';
 
   if (t === 'google') {
     return `
       <div style="background:#1a73e8;color:white;padding:16px 20px;margin:-24px -24px 16px;">
         <div style="font-size:18px;font-weight:800;">${safeName}</div>
-        <div style="font-size:9px;opacity:0.85;margin-top:4px;">${safeEmail}${safePhone?' · '+safePhone:''}${safeLoc?' · '+safeLoc:''}</div>
+        <div style="font-size:9px;opacity:0.85;margin-top:4px;">${safeEmail}${safePhone ? ' · ' + safePhone : ''}${safeLoc ? ' · ' + safeLoc : ''}</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;">
         <div>
           ${safeSummary ? `<div style="font-size:9px;font-weight:700;color:#1a73e8;border-bottom:1px solid #1a73e8;margin-bottom:6px;padding-bottom:2px;">SUMMARY</div><p style="font-size:9px;color:#374151;line-height:1.5;">${safeSummary}</p>` : ''}
           ${d.experience.length ? `<div style="font-size:9px;font-weight:700;color:#1a73e8;border-bottom:1px solid #1a73e8;margin:8px 0 6px;padding-bottom:2px;">EXPERIENCE</div>
-          ${d.experience.slice(0,2).map(e=>`<div style="margin-bottom:6px;"><strong style="font-size:9px;">${escHtml(e.title||'')}</strong> <span style="color:#6b7280;font-size:8px;">${escHtml(e.company||'')} · ${escHtml(e.duration||'')}</span></div>`).join('')}` : ''}
+          ${d.experience.slice(0, 2).map(e => `<div style="margin-bottom:6px;"><strong style="font-size:9px;">${escHtml(e.title || '')}</strong> <span style="color:#6b7280;font-size:8px;">${escHtml(e.company || '')} · ${escHtml(e.duration || '')}</span></div>`).join('')}` : ''}
         </div>
         <div>
-          ${d.skills.length ? `<div style="font-size:9px;font-weight:700;color:#1a73e8;border-bottom:1px solid #1a73e8;margin-bottom:6px;padding-bottom:2px;">SKILLS</div><div>${d.skills.slice(0,8).map(s=>`<span style="display:inline-block;background:#eff6ff;color:#1d4ed8;border-radius:2px;padding:1px 4px;font-size:7px;margin:1px 1px 1px 0;">${escHtml(s)}</span>`).join('')}</div>` : ''}
+          ${d.skills.length ? `<div style="font-size:9px;font-weight:700;color:#1a73e8;border-bottom:1px solid #1a73e8;margin-bottom:6px;padding-bottom:2px;">SKILLS</div><div>${d.skills.slice(0, 8).map(s => `<span style="display:inline-block;background:#eff6ff;color:#1d4ed8;border-radius:2px;padding:1px 4px;font-size:7px;margin:1px 1px 1px 0;">${escHtml(s)}</span>`).join('')}</div>` : ''}
         </div>
       </div>`;
   }
@@ -700,12 +731,12 @@ function generatePreviewHTML(d) {
           <div style="margin-top:12px;font-size:7px;opacity:0.6;font-weight:700;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:3px;margin-bottom:6px;">CONTACT</div>
           <div style="font-size:7.5px;opacity:0.85;">${safeEmail}</div>
           <div style="font-size:7.5px;opacity:0.75;">${safePhone}</div>
-          ${d.skills.length ? `<div style="margin-top:10px;font-size:7px;opacity:0.6;font-weight:700;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:3px;margin-bottom:6px;">SKILLS</div><div>${d.skills.slice(0,6).map(s=>`<span style="display:inline-block;background:rgba(255,255,255,0.1);color:white;border-radius:2px;padding:1px 4px;font-size:7px;margin:1px 1px 0 0;">${escHtml(s)}</span>`).join('')}</div>` : ''}
+          ${d.skills.length ? `<div style="margin-top:10px;font-size:7px;opacity:0.6;font-weight:700;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:3px;margin-bottom:6px;">SKILLS</div><div>${d.skills.slice(0, 6).map(s => `<span style="display:inline-block;background:rgba(255,255,255,0.1);color:white;border-radius:2px;padding:1px 4px;font-size:7px;margin:1px 1px 0 0;">${escHtml(s)}</span>`).join('')}</div>` : ''}
         </div>
         <div style="padding:12px 14px;">
           ${safeSummary ? `<div style="font-size:9px;font-weight:700;color:#00365a;border-left:2px solid #0078d4;padding-left:5px;margin-bottom:6px;">About Me</div><p style="font-size:8.5px;color:#374151;line-height:1.5;margin-bottom:10px;">${safeSummary}</p>` : ''}
           ${d.experience.length ? `<div style="font-size:9px;font-weight:700;color:#00365a;border-left:2px solid #0078d4;padding-left:5px;margin-bottom:6px;">Experience</div>
-          ${d.experience.slice(0,2).map(e=>`<div style="margin-bottom:6px;"><strong style="font-size:9px;">${escHtml(e.title||'')}</strong><div style="font-size:8px;color:#0078d4;">${escHtml(e.company||'')}</div><div style="font-size:7.5px;color:#6b7280;">${escHtml(e.duration||'')}</div></div>`).join('')}` : ''}
+          ${d.experience.slice(0, 2).map(e => `<div style="margin-bottom:6px;"><strong style="font-size:9px;">${escHtml(e.title || '')}</strong><div style="font-size:8px;color:#0078d4;">${escHtml(e.company || '')}</div><div style="font-size:7.5px;color:#6b7280;">${escHtml(e.duration || '')}</div></div>`).join('')}` : ''}
         </div>
       </div>`;
   }
@@ -714,15 +745,15 @@ function generatePreviewHTML(d) {
     return `
       <div style="background:linear-gradient(135deg,#0866ff,#1976d2);color:white;padding:14px 18px;margin:-24px -24px 14px;">
         <div style="font-size:18px;font-weight:900;letter-spacing:-0.5px;">${safeName}</div>
-        <div style="font-size:8.5px;opacity:0.85;margin-top:4px;">${safeEmail}${safePhone?' · '+safePhone:''}${safeLoc?' · '+safeLoc:''}</div>
+        <div style="font-size:8.5px;opacity:0.85;margin-top:4px;">${safeEmail}${safePhone ? ' · ' + safePhone : ''}${safeLoc ? ' · ' + safeLoc : ''}</div>
       </div>
       ${safeSummary ? `<p style="font-size:9px;color:#374151;line-height:1.5;margin-bottom:10px;">${safeSummary}</p>` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div>
-          ${d.experience.length ? `<div style="font-size:8.5px;font-weight:800;color:#0866ff;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Experience</div>${d.experience.slice(0,2).map(e=>`<div style="margin-bottom:6px;border-left:2px solid #e8f0fe;padding-left:6px;"><strong style="font-size:9px;">${escHtml(e.title||'')}</strong><div style="font-size:8px;color:#0866ff;">${escHtml(e.company||'')}</div></div>`).join('')}` : ''}
+          ${d.experience.length ? `<div style="font-size:8.5px;font-weight:800;color:#0866ff;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Experience</div>${d.experience.slice(0, 2).map(e => `<div style="margin-bottom:6px;border-left:2px solid #e8f0fe;padding-left:6px;"><strong style="font-size:9px;">${escHtml(e.title || '')}</strong><div style="font-size:8px;color:#0866ff;">${escHtml(e.company || '')}</div></div>`).join('')}` : ''}
         </div>
         <div>
-          ${d.skills.length ? `<div style="font-size:8.5px;font-weight:800;color:#0866ff;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Skills</div><div>${d.skills.slice(0,8).map(s=>`<span style="display:inline-block;background:#e8f0fe;color:#0866ff;border-radius:99px;padding:1px 6px;font-size:7.5px;font-weight:600;margin:1px 2px 1px 0;">${escHtml(s)}</span>`).join('')}</div>` : ''}
+          ${d.skills.length ? `<div style="font-size:8.5px;font-weight:800;color:#0866ff;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Skills</div><div>${d.skills.slice(0, 8).map(s => `<span style="display:inline-block;background:#e8f0fe;color:#0866ff;border-radius:99px;padding:1px 6px;font-size:7.5px;font-weight:600;margin:1px 2px 1px 0;">${escHtml(s)}</span>`).join('')}</div>` : ''}
         </div>
       </div>`;
   }
@@ -731,15 +762,15 @@ function generatePreviewHTML(d) {
     return `
       <div style="border-bottom:3px solid #c74634;padding-bottom:10px;margin:-24px -24px 14px;padding:16px 20px 10px;">
         <div style="font-size:18px;font-weight:900;color:#c74634;letter-spacing:-0.5px;">${safeName}</div>
-        <div style="font-size:8.5px;color:#6b7280;margin-top:4px;">${safeEmail}${safePhone?' · '+safePhone:''}${safeLoc?' · '+safeLoc:''}</div>
+        <div style="font-size:8.5px;color:#6b7280;margin-top:4px;">${safeEmail}${safePhone ? ' · ' + safePhone : ''}${safeLoc ? ' · ' + safeLoc : ''}</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 110px;gap:10px;">
         <div>
           ${safeSummary ? `<div style="font-size:8.5px;font-weight:800;color:#c74634;border-bottom:1px solid #fee2e2;padding-bottom:3px;margin-bottom:6px;text-transform:uppercase;">Summary</div><p style="font-size:9px;color:#374151;line-height:1.5;margin-bottom:10px;">${safeSummary}</p>` : ''}
-          ${d.experience.length ? `<div style="font-size:8.5px;font-weight:800;color:#c74634;border-bottom:1px solid #fee2e2;padding-bottom:3px;margin-bottom:6px;text-transform:uppercase;">Experience</div>${d.experience.slice(0,2).map(e=>`<div style="margin-bottom:6px;"><strong style="font-size:9px;">${escHtml(e.title||'')}</strong><div style="font-size:8px;color:#c74634;">${escHtml(e.company||'')}</div></div>`).join('')}` : ''}
+          ${d.experience.length ? `<div style="font-size:8.5px;font-weight:800;color:#c74634;border-bottom:1px solid #fee2e2;padding-bottom:3px;margin-bottom:6px;text-transform:uppercase;">Experience</div>${d.experience.slice(0, 2).map(e => `<div style="margin-bottom:6px;"><strong style="font-size:9px;">${escHtml(e.title || '')}</strong><div style="font-size:8px;color:#c74634;">${escHtml(e.company || '')}</div></div>`).join('')}` : ''}
         </div>
         <div>
-          ${d.skills.length ? `<div style="font-size:8.5px;font-weight:800;color:#c74634;text-transform:uppercase;margin-bottom:6px;">Skills</div><div>${d.skills.slice(0,6).map(s=>`<span style="display:inline-block;background:#fee2e2;color:#c74634;border-radius:2px;padding:1px 4px;font-size:7px;margin:1px 1px 0 0;">${escHtml(s)}</span>`).join('')}</div>` : ''}
+          ${d.skills.length ? `<div style="font-size:8.5px;font-weight:800;color:#c74634;text-transform:uppercase;margin-bottom:6px;">Skills</div><div>${d.skills.slice(0, 6).map(s => `<span style="display:inline-block;background:#fee2e2;color:#c74634;border-radius:2px;padding:1px 4px;font-size:7px;margin:1px 1px 0 0;">${escHtml(s)}</span>`).join('')}</div>` : ''}
         </div>
       </div>`;
   }
@@ -748,7 +779,6 @@ function generatePreviewHTML(d) {
 
 // ── PDF Export ────────────────────────────────────────────────
 async function exportPDF() {
-  // Save first
   await saveResume(true);
   if (window.RESUME_ID) {
     window.open(`/resume/${window.RESUME_ID}/preview`, '_blank');
@@ -757,14 +787,14 @@ async function exportPDF() {
 
 // ── Utilities ─────────────────────────────────────────────────
 function escHtml(str) {
-  return String(str||'')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function debounce(fn, ms) {
   let timer;
-  return function(...args) {
+  return function (...args) {
     clearTimeout(timer);
     timer = setTimeout(() => fn.apply(this, args), ms);
   };

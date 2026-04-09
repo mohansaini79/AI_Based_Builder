@@ -1,14 +1,17 @@
 {% extends "base.html" %}
 {% block title %}{{ code }} Error – ResumeAI{% endblock %}
 {% block body %}
-<div class="min-h-screen hero-gradient flex items-center justify-center px-4">
-  <div class="text-center animate-slide-up">
-    <div class="text-8xl font-black gradient-text mb-4">{{ code }}</div>
-    <h1 class="text-2xl font-bold text-white mb-3">{{ message }}</h1>
-    <p class="text-gray-400 mb-8">Something went wrong. Let's get you back on track.</p>
-    <div class="flex items-center justify-center gap-4">
-      <a href="/dashboard" class="btn-primary px-6 py-2.5">Go to Dashboard</a>
-      <a href="/" class="btn-secondary px-6 py-2.5">Home</a>
+<div class="min-h-screen hero-gradient flex items-center justify-center px-4 py-12">
+  <div class="glow-dot w-64 h-64 bg-indigo-600/15 top-20 left-10 fixed pointer-events-none"></div>
+  <div class="glow-dot w-56 h-56 bg-purple-600/10 bottom-20 right-10 fixed pointer-events-none"></div>
+
+  <div class="text-center animate-slide-up relative z-10">
+    <div class="text-7xl sm:text-8xl font-black gradient-text mb-4">{{ code }}</div>
+    <h1 class="text-xl sm:text-2xl font-bold text-white mb-3">{{ message }}</h1>
+    <p class="text-gray-400 mb-8 text-sm sm:text-base">Something went wrong. Let's get you back on track.</p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+      <a href="/dashboard" class="btn-primary  px-6 py-2.5 w-full sm:w-auto text-center">Go to Dashboard</a>
+      <a href="/"          class="btn-secondary px-6 py-2.5 w-full sm:w-auto text-center">← Home</a>
     </div>
   </div>
 </div>

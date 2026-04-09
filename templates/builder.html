@@ -2,15 +2,13 @@
 {% block title %}{% if resume %}Edit Resume{% else %}New Resume{% endif %} – ResumeAI{% endblock %}
 
 {% block extra_head %}
-<!-- Quill Editor -->
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-<!-- html2pdf -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 {% endblock %}
 
 {% block body %}
-<!-- Pass resume data to JS (JSON data islands — avoids linter false-positives on Jinja2 syntax) -->
+<!-- Pass resume data to JS -->
 <script type="application/json" id="__resume_id__">{{ resume_id | tojson if resume_id else 'null' }}</script>
 <script type="application/json" id="__resume_data__">{{ resume | tojson if resume else '{}' }}</script>
 <script>
@@ -18,72 +16,139 @@
   window.RESUME_DATA = JSON.parse(document.getElementById('__resume_data__').textContent);
 </script>
 
+<!-- Mobile/panel overlays -->
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+<div id="panel-overlay"   class="sidebar-overlay" style="z-index:49;"></div>
+
+<!-- Mobile Sidebar Drawer -->
+<div id="sidebar-drawer" class="sidebar-drawer sidebar flex flex-col py-5 px-3">
+  <div class="flex items-center justify-between px-2 mb-6">
+    <a href="/dashboard" class="flex items-center gap-2 font-bold text-base">
+      <i class="fa-solid fa-bolt text-yellow-400 text-xl"></i>
+      <span class="gradient-text-brand">ResumeAI</span>
+    </a>
+    <button id="sidebar-close-btn" class="text-gray-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+  </div>
+  <nav class="flex flex-col gap-1 text-sm mb-6">
+    <a href="/dashboard"  class="sidebar-link"><i class="fa-solid fa-gauge w-4 text-center"></i> Dashboard</a>
+    <a href="/resume/new" class="sidebar-link active"><i class="fa-solid fa-pen-to-square w-4 text-center"></i> Builder</a>
+    <a href="/upload"     class="sidebar-link"><i class="fa-solid fa-upload w-4 text-center"></i> Upload</a>
+  </nav>
+  <div class="px-2">
+    <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Sections</p>
+    {% for sec, icon in [('basics','fa-user'),('summary','fa-file-lines'),('skills','fa-screwdriver-wrench'),('experience','fa-briefcase'),('education','fa-graduation-cap'),('projects','fa-rocket'),('certifications','fa-certificate')] %}
+    <button onclick="switchTab('{{ sec }}');closeMobileSidebar();"
+            class="builder-tab text-left w-full mb-0.5">
+      <i class="fa-solid {{ icon }} w-4 text-center text-xs opacity-70"></i>
+      {{ sec|title }}
+    </button>
+    {% endfor %}
+  </div>
+  <div class="mt-auto pt-4 border-t border-white/5">
+    <a href="/logout" class="sidebar-link text-xs text-gray-500 hover:text-red-400">
+      <i class="fa-solid fa-arrow-right-from-bracket w-4 text-center"></i> Sign Out
+    </a>
+  </div>
+</div>
+
+<!-- ══ Main layout ══ -->
 <div class="flex h-screen overflow-hidden bg-gray-950">
 
-  <!-- ── Left Sidebar ── -->
-  <aside class="sidebar w-52 flex-shrink-0 flex flex-col py-5 px-3 overflow-y-auto">
+  <!-- ── Desktop Left Sidebar ── -->
+  <aside class="sidebar-desktop sidebar w-52 flex-shrink-0 flex flex-col py-5 px-3 overflow-y-auto">
     <a href="/dashboard" class="flex items-center gap-2 font-bold text-base px-2 mb-6">
-      <span class="text-xl">⚡</span><span class="gradient-text-brand">ResumeAI</span>
+      <i class="fa-solid fa-bolt text-yellow-400 text-xl"></i>
+      <span class="gradient-text-brand">ResumeAI</span>
     </a>
-    <nav class="flex flex-col gap-1 text-sm">
-      <a href="/dashboard"  class="sidebar-link">📊 Dashboard</a>
-      <a href="/resume/new" class="sidebar-link active">✏️ Builder</a>
-      <a href="/upload"     class="sidebar-link">📤 Upload</a>
+    <nav class="flex flex-col gap-1 text-sm mb-6">
+      <a href="/dashboard"  class="sidebar-link"><i class="fa-solid fa-gauge w-4 text-center"></i> Dashboard</a>
+      <a href="/resume/new" class="sidebar-link active"><i class="fa-solid fa-pen-to-square w-4 text-center"></i> Builder</a>
+      <a href="/upload"     class="sidebar-link"><i class="fa-solid fa-upload w-4 text-center"></i> Upload</a>
     </nav>
-    <!-- Section jump nav -->
-    <div class="mt-8 px-2">
-      <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Sections</p>
-      <div id="section-nav" class="flex flex-col gap-1">
-        {% for sec, icon in [('basics','👤'),('summary','✍️'),('skills','🛠'),('experience','💼'),('education','🎓'),('projects','🚀'),('certifications','🏅')] %}
-        <button onclick="switchTab('{{ sec }}')"
-                id="nav-{{ sec }}" class="builder-tab text-left" data-section="{{ sec }}">
-          {{ icon }} {{ sec|title }}
+    <div class="px-2">
+      <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-2">Sections</p>
+      <div id="section-nav" class="flex flex-col gap-0.5">
+        {% for sec, icon in [('basics','fa-user'),('summary','fa-file-lines'),('skills','fa-screwdriver-wrench'),('experience','fa-briefcase'),('education','fa-graduation-cap'),('projects','fa-rocket'),('certifications','fa-certificate')] %}
+        <button onclick="switchTab('{{ sec }}')" id="nav-{{ sec }}"
+                class="builder-tab text-left" data-section="{{ sec }}">
+          <i class="fa-solid {{ icon }} w-4 text-center text-xs opacity-70"></i> {{ sec|title }}
         </button>
         {% endfor %}
       </div>
     </div>
-    <div class="mt-auto pt-4 border-t border-white/5 space-y-2">
-      <a href="/logout" class="sidebar-link text-xs text-gray-600 hover:text-red-400">🚪 Sign Out</a>
+    <div class="mt-auto pt-4 border-t border-white/5">
+      <a href="/logout" class="sidebar-link text-xs text-gray-500 hover:text-red-400">
+        <i class="fa-solid fa-arrow-right-from-bracket w-4 text-center"></i> Sign Out
+      </a>
     </div>
   </aside>
 
   <!-- ── Center: Form ── -->
-  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden builder-center">
     <!-- Toolbar -->
-    <div class="sticky top-0 z-30 bg-gray-950/90 backdrop-blur border-b border-white/5 px-5 py-3 flex items-center gap-3 flex-wrap">
-      <div class="flex-1 min-w-0">
-        <input id="resume-title" type="text" class="form-input text-sm max-w-xs"
-               placeholder="Resume Title" value="{{ resume.title if resume else 'Untitled Resume' }}" />
-      </div>
+    <div class="builder-toolbar sticky top-0 z-30 bg-gray-950/90 backdrop-blur border-b border-white/5 flex items-center gap-2 px-3 py-2.5">
+      <!-- Hamburger (mobile) -->
+      <button id="sidebar-open-btn" class="hamburger-btn" aria-label="Open menu">
+        <i class="fa-solid fa-bars text-sm"></i>
+      </button>
+
+      <!-- Resume title -->
+      <input id="resume-title" type="text" class="form-input text-sm flex-1 min-w-0 max-w-xs"
+             placeholder="Resume Title" value="{{ resume.title if resume else 'Untitled Resume' }}" />
+
       <!-- Template selector -->
-      <div class="flex gap-1.5">
-        {% for tpl, emoji in [('google','🔵'),('microsoft','🪟'),('meta','🔷'),('oracle','🔴')] %}
-        <button id="tpl-{{ tpl }}" onclick="selectTemplate('{{ tpl }}')"
-                class="template-card px-3 py-1.5 text-xs font-semibold flex items-center gap-1 {% if (resume and resume.template == tpl) or (not resume and tpl=='google') %}selected{% endif %}"
-                title="{{ tpl|title }} Template">
-          <span>{{ emoji }}</span><span class="hidden sm:inline">{{ tpl|title }}</span>
+      <div class="hidden sm:flex gap-1">
+        {% for tpl, letter, color in [('google','G','bg-blue-600'),('microsoft','M','bg-blue-500'),('meta','M','bg-indigo-600'),('oracle','O','bg-red-600')] %}
+        <button id="tpl-btn-{{ tpl }}" onclick="selectTemplate('{{ tpl }}')"
+                title="{{ tpl|title }} Template"
+                class="template-card w-8 h-8 flex items-center justify-center text-xs font-bold text-white {{ color }} rounded-lg {% if (resume and resume.template == tpl) or (not resume and tpl=='google') %}selected{% endif %}">
+          {{ letter }}
         </button>
         {% endfor %}
       </div>
-      <div class="flex gap-2">
-        <button id="save-btn"    onclick="saveResume()"    class="btn-primary text-xs px-4 py-2">💾 Save</button>
-        <button id="ai-score-btn" onclick="runATSScore()"  class="btn-secondary text-xs px-4 py-2">📊 ATS Score</button>
-        <button id="export-pdf-btn" onclick="exportPDF()"  class="btn-secondary text-xs px-4 py-2">⬇ PDF</button>
+
+      <!-- Action buttons -->
+      <div class="flex gap-1.5 flex-shrink-0">
+        <button id="save-btn" onclick="saveResume()"
+                class="btn-primary text-xs px-3 py-2">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span class="hidden sm:inline">Save</span>
+        </button>
+        <!-- ATS toggle — always visible, opens panel -->
+        <button id="panel-toggle-btn" onclick="toggleRightPanel()"
+                class="panel-toggle-btn">
+          <i class="fa-solid fa-chart-bar"></i>
+          <span>ATS</span>
+        </button>
+        <!-- Desktop ATS button — also runs the score -->
+        <button id="ai-score-btn" onclick="runATSScore()"
+                class="btn-secondary text-xs px-3 py-2 hidden lg:inline-flex">
+          <i class="fa-solid fa-chart-bar"></i> ATS
+        </button>
+        <button id="export-pdf-btn" onclick="exportPDF()"
+                class="btn-secondary text-xs px-3 py-2">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span class="hidden sm:inline">PDF</span>
+        </button>
       </div>
     </div>
 
-    <!-- Form Tabs & Content -->
-    <div class="flex-1 overflow-y-auto px-5 py-5">
+    <!-- ── Form Tabs ── -->
+    <div class="flex-1 overflow-y-auto px-4 sm:px-5 py-4 sm:py-5">
 
-      <!-- ── BASICS ── -->
+      <!-- BASICS -->
       <div id="tab-basics" class="section-panel active">
-        <h2 class="text-lg font-bold mb-4 text-white">👤 Personal Info</h2>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="col-span-2 sm:col-span-1">
+        <h2 class="text-lg font-bold mb-4 text-white flex items-center gap-2">
+          <i class="fa-solid fa-user text-indigo-400"></i> Personal Info
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
             <label class="form-label">Full Name *</label>
             <input id="f-full_name" class="form-input" type="text" placeholder="Jane Smith" />
           </div>
-          <div class="col-span-2 sm:col-span-1">
+          <div>
             <label class="form-label">Email *</label>
             <input id="f-email" class="form-input" type="email" placeholder="jane@example.com" />
           </div>
@@ -96,20 +161,22 @@
             <input id="f-location" class="form-input" type="text" placeholder="San Francisco, CA" />
           </div>
           <div>
-            <label class="form-label">LinkedIn URL</label>
+            <label class="form-label"><i class="fa-brands fa-linkedin text-blue-400"></i> LinkedIn URL</label>
             <input id="f-linkedin" class="form-input" type="url" placeholder="linkedin.com/in/..." />
           </div>
           <div>
-            <label class="form-label">GitHub URL</label>
+            <label class="form-label"><i class="fa-brands fa-github text-gray-300"></i> GitHub URL</label>
             <input id="f-github" class="form-input" type="url" placeholder="github.com/..." />
           </div>
-          <div class="col-span-2">
-            <label class="form-label">Personal Website</label>
+          <div class="sm:col-span-2">
+            <label class="form-label"><i class="fa-solid fa-globe text-emerald-400"></i> Personal Website</label>
             <input id="f-website" class="form-input" type="url" placeholder="https://yoursite.com" />
           </div>
         </div>
-        <div class="mt-6">
-          <label class="form-label">ATS Domain</label>
+        <div class="mt-5">
+          <label class="form-label">
+            <i class="fa-solid fa-bullseye text-orange-400"></i> ATS Domain / Target Role
+          </label>
           <select id="f-ats_domain" class="form-input">
             {% for d in ['Software Engineering','Data Science','Product Management','Marketing','Finance','Healthcare','Design','DevOps'] %}
             <option value="{{ d }}" {% if resume and resume.ats_domain == d %}selected{% endif %}>{{ d }}</option>
@@ -118,106 +185,147 @@
         </div>
       </div>
 
-      <!-- ── SUMMARY ── -->
+      <!-- SUMMARY -->
       <div id="tab-summary" class="section-panel">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-white">✍️ Professional Summary</h2>
-          <button onclick="rewriteSection('summary')" class="btn-secondary text-xs px-3 py-1.5">🤖 AI Rewrite</button>
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-file-lines text-indigo-400"></i> Professional Summary
+          </h2>
+          <button onclick="openRewriteSection('summary')" class="btn-secondary text-xs px-3 py-1.5">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Rewrite
+          </button>
         </div>
         <div id="editor-summary" style="min-height:160px;"></div>
       </div>
 
-      <!-- ── SKILLS ── -->
+      <!-- SKILLS -->
       <div id="tab-skills" class="section-panel">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-white">🛠 Skills</h2>
-          <button onclick="rewriteSection('skills')" class="btn-secondary text-xs px-3 py-1.5">🤖 AI Suggest</button>
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-screwdriver-wrench text-indigo-400"></i> Skills
+          </h2>
+          <button onclick="openRewriteSection('skills')" class="btn-secondary text-xs px-3 py-1.5">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Suggest
+          </button>
         </div>
         <div class="glass-card p-4 mb-4">
           <div class="flex gap-2 mb-3">
-            <input id="skill-input" class="form-input flex-1" type="text" placeholder="e.g. Python, React, Docker..." />
-            <button onclick="addSkillTag()" class="btn-primary px-4 py-2 text-sm">Add</button>
+            <input id="skill-input" class="form-input flex-1" type="text"
+                   placeholder="e.g. Python, React, Docker  (press Enter or comma)" />
+            <button onclick="addSkillTag()" class="btn-primary px-4 py-2 text-sm flex-shrink-0">
+              <i class="fa-solid fa-plus"></i>
+            </button>
           </div>
-          <div id="skills-container" class="flex flex-wrap gap-2 min-h-[40px]">
-            <!-- skill chips injected here -->
-          </div>
+          <div id="skills-container" class="flex flex-wrap gap-2 min-h-[40px]"></div>
         </div>
-        <!-- AI suggestions panel -->
         <div id="skill-suggestions-panel" class="glass-card p-4 hidden">
-          <p class="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-3">💡 Suggested Skills to Add</p>
+          <p class="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-3">
+            <i class="fa-solid fa-lightbulb text-yellow-400"></i> Suggested Skills to Add
+          </p>
           <div id="suggested-skills" class="flex flex-wrap gap-2"></div>
         </div>
       </div>
 
-      <!-- ── EXPERIENCE ── -->
+      <!-- EXPERIENCE -->
       <div id="tab-experience" class="section-panel">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-white">💼 Work Experience</h2>
-          <button onclick="addExperience()" class="btn-primary text-xs px-4 py-2">+ Add Entry</button>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-briefcase text-indigo-400"></i> Work Experience
+          </h2>
+          <button onclick="addExperience()" class="btn-primary text-xs px-4 py-2">
+            <i class="fa-solid fa-plus"></i> Add Entry
+          </button>
         </div>
         <div id="experience-list"></div>
       </div>
 
-      <!-- ── EDUCATION ── -->
+      <!-- EDUCATION -->
       <div id="tab-education" class="section-panel">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-white">🎓 Education</h2>
-          <button onclick="addEducation()" class="btn-primary text-xs px-4 py-2">+ Add Entry</button>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-graduation-cap text-indigo-400"></i> Education
+          </h2>
+          <button onclick="addEducation()" class="btn-primary text-xs px-4 py-2">
+            <i class="fa-solid fa-plus"></i> Add Entry
+          </button>
         </div>
         <div id="education-list"></div>
       </div>
 
-      <!-- ── PROJECTS ── -->
+      <!-- PROJECTS -->
       <div id="tab-projects" class="section-panel">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-white">🚀 Projects</h2>
-          <button onclick="addProject()" class="btn-primary text-xs px-4 py-2">+ Add Project</button>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-rocket text-indigo-400"></i> Projects
+          </h2>
+          <button onclick="addProject()" class="btn-primary text-xs px-4 py-2">
+            <i class="fa-solid fa-plus"></i> Add Project
+          </button>
         </div>
         <div id="projects-list"></div>
       </div>
 
-      <!-- ── CERTIFICATIONS ── -->
+      <!-- CERTIFICATIONS -->
       <div id="tab-certifications" class="section-panel">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-white">🏅 Certifications</h2>
-          <button onclick="addCertification()" class="btn-primary text-xs px-4 py-2">+ Add</button>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-certificate text-indigo-400"></i> Certifications
+          </h2>
+          <button onclick="addCertification()" class="btn-primary text-xs px-4 py-2">
+            <i class="fa-solid fa-plus"></i> Add
+          </button>
         </div>
         <div id="certifications-list"></div>
       </div>
 
     </div><!-- /form scroll -->
-  </div>
+  </div><!-- /center column -->
 
-  <!-- ── Right Panel: Preview + ATS ── -->
-  <aside class="w-80 xl:w-96 flex-shrink-0 flex flex-col border-l border-white/5 overflow-y-auto bg-gray-900/30">
-    <div class="p-4 border-b border-white/5">
-      <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-widest">Live Preview</h3>
+  <!-- ── Right Panel: Preview + ATS (single DOM instance, doubles as mobile drawer) ── -->
+  <aside class="right-panel-aside w-80 xl:w-96 flex-shrink-0 border-l border-white/5 bg-gray-900/30">
+
+    <!-- Header with close button (visible only on mobile/tablet) -->
+    <div class="flex items-center justify-between p-4 border-b border-white/5">
+      <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-widest">Preview &amp; ATS</h3>
+      <button id="panel-close-btn"
+              class="lg:hidden w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white rounded-lg hover:bg-white/10">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
 
-    <!-- Mini preview -->
-    <div class="p-3 flex-shrink-0">
-      <div id="mini-preview" class="bg-white rounded-lg overflow-hidden shadow-xl" style="transform:scale(0.55);transform-origin:top left;width:182%;height:380px;pointer-events:none;overflow:hidden;">
-        <div id="resume-preview-inner" class="p-6 text-gray-900" style="font-size:11px;line-height:1.4;"></div>
+    <!-- Mini live preview -->
+    <div class="p-3 flex-shrink-0 border-b border-white/5">
+      <div class="text-xs text-gray-600 font-medium uppercase tracking-widest mb-2">Live Preview</div>
+      <div style="position:relative;height:210px;overflow:hidden;border-radius:0.5rem;background:#fff;">
+        <div style="transform:scale(0.42);transform-origin:top left;width:238%;pointer-events:none;">
+          <div id="resume-preview-inner" class="p-6 text-gray-900" style="min-width:210mm;font-size:11px;line-height:1.4;"></div>
+        </div>
       </div>
-      <div style="height:220px;"></div>
     </div>
 
-    <!-- ATS Score panel -->
-    <div class="p-4 border-t border-white/5">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-semibold text-white">ATS Score</h3>
-        <button onclick="runATSScore()" id="refresh-ats-btn"
-                class="text-xs text-indigo-400 hover:text-indigo-300">Refresh ↻</button>
+    <!-- ATS Score section — SINGLE canonical instance — builder.js targets these IDs -->
+    <div class="p-4 flex-1 overflow-y-auto">
+
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-white">
+          <i class="fa-solid fa-chart-bar text-indigo-400 mr-1"></i> ATS Score
+        </h3>
+        <button onclick="runATSScore()"
+                class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+          <i class="fa-solid fa-rotate-right text-xs"></i> Run
+        </button>
       </div>
 
       <!-- Score ring -->
-      <div class="flex items-center gap-4 mb-4">
-        <div class="score-ring-container flex-shrink-0">
-          <svg width="100" height="100" viewBox="0 0 100 100" class="rotate-[-90deg]">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
-            <circle id="ats-ring-fill" cx="50" cy="50" r="40" fill="none"
+      <div class="flex items-center gap-4 mb-5">
+        <div class="score-ring-container flex-shrink-0 relative" style="width:96px;height:96px;">
+          <svg width="96" height="96" viewBox="0 0 96 96" style="transform:rotate(-90deg);">
+            <circle cx="48" cy="48" r="38" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+            <circle id="ats-ring-fill" cx="48" cy="48" r="38" fill="none"
                     stroke="url(#atsGrad)" stroke-width="8"
-                    stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="251.2"
+                    stroke-linecap="round"
+                    stroke-dasharray="238.76"
+                    stroke-dashoffset="238.76"
                     style="transition:stroke-dashoffset 1.2s ease"/>
             <defs>
               <linearGradient id="atsGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -226,60 +334,73 @@
               </linearGradient>
             </defs>
           </svg>
-          <div class="score-ring-text">
-            <span id="ats-score-num" class="text-2xl font-black text-white">–</span>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <span id="ats-score-num" class="text-2xl font-black text-white leading-none">–</span>
             <span class="text-xs text-gray-500">/100</span>
           </div>
         </div>
-        <div class="flex-1 space-y-2">
-          <div id="ats-label" class="text-sm font-semibold text-gray-400">Run ATS scan</div>
+        <div class="flex-1">
+          <div id="ats-label"        class="text-sm font-semibold text-gray-400 mb-1">Run ATS scan</div>
           <div id="ats-domain-label" class="text-xs text-gray-600"></div>
         </div>
       </div>
 
-      <!-- Template scores -->
-      <div id="template-scores" class="space-y-2 hidden">
-        <p class="text-xs text-gray-600 font-medium uppercase tracking-widest mb-2">Template Fit</p>
+      <!-- Template fit scores -->
+      <div id="template-scores" class="hidden mb-5">
+        <p class="text-xs text-gray-600 font-semibold uppercase tracking-widest mb-3">Template Fit</p>
         {% for tpl in ['Google','Microsoft','Meta','Oracle'] %}
-        <div class="flex items-center gap-2 text-xs">
+        <div class="flex items-center gap-2 text-xs mb-2">
           <span class="w-20 text-gray-400">{{ tpl }}</span>
           <div class="flex-1 progress-bar-track">
             <div id="tpl-score-{{ tpl|lower }}" class="progress-bar-fill" style="width:0%"></div>
           </div>
-          <span id="tpl-score-{{ tpl|lower }}-num" class="w-8 text-right text-gray-400">–</span>
+          <span id="tpl-score-{{ tpl|lower }}-num" class="w-8 text-right text-gray-400 font-medium">–</span>
         </div>
         {% endfor %}
       </div>
 
       <!-- Missing keywords -->
-      <div id="missing-kw-panel" class="mt-4 hidden">
-        <p class="text-xs text-gray-600 font-medium uppercase tracking-widest mb-2">Missing Keywords</p>
+      <div id="missing-kw-panel" class="hidden mb-5">
+        <p class="text-xs text-gray-600 font-semibold uppercase tracking-widest mb-2">
+          <i class="fa-solid fa-triangle-exclamation text-yellow-500 mr-1"></i>Missing Keywords
+        </p>
         <div id="missing-kw-chips" class="flex flex-wrap gap-1.5"></div>
       </div>
 
-      <!-- AI Suggestions -->
-      <div id="ai-suggestions-panel" class="mt-4 hidden">
-        <p class="text-xs text-gray-600 font-medium uppercase tracking-widest mb-2">💡 AI Suggestions</p>
+      <!-- AI suggestions -->
+      <div id="ai-suggestions-panel" class="hidden">
+        <p class="text-xs text-gray-600 font-semibold uppercase tracking-widest mb-2">
+          <i class="fa-solid fa-lightbulb text-yellow-400 mr-1"></i>AI Suggestions
+        </p>
         <div id="ai-suggestions-list" class="space-y-2"></div>
       </div>
+
     </div>
   </aside>
 
-</div>
+</div><!-- /main layout -->
 
-<!-- AI Rewrite overlay -->
+<!-- AI Rewrite Modal -->
 <div id="rewrite-overlay" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
   <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeRewriteModal()"></div>
-  <div class="glass-card relative z-10 p-6 max-w-2xl w-full animate-slide-up max-h-[80vh] overflow-y-auto">
-    <h3 id="rewrite-title" class="text-lg font-bold text-white mb-4"></h3>
+  <div class="glass-card relative z-10 p-5 sm:p-6 max-w-2xl w-full animate-slide-up max-h-[80vh] overflow-y-auto">
+    <h3 id="rewrite-title" class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> AI Rewrite
+    </h3>
     <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 mb-4">
-      <p class="text-sm text-indigo-200 font-medium mb-1">AI Suggestion:</p>
+      <p class="text-sm text-indigo-300 font-medium mb-2">
+        <i class="fa-solid fa-robot mr-1"></i> AI Suggestion:
+      </p>
       <div id="rewrite-result" class="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap min-h-[80px]">
-        <div class="flex items-center gap-2 text-gray-400"><div class="spinner"></div> Generating...</div>
+        <div class="flex items-center gap-2 text-gray-400">
+          <div class="spinner"></div> Generating...
+        </div>
       </div>
     </div>
     <div class="flex gap-3">
-      <button onclick="applyRewrite()" class="btn-primary flex-1">✅ Apply</button>
+      <button onclick="applyRewrite()"      class="btn-primary  flex-1">
+        <i class="fa-solid fa-check"></i> Apply
+      </button>
       <button onclick="closeRewriteModal()" class="btn-secondary flex-1">Cancel</button>
     </div>
   </div>
@@ -288,4 +409,41 @@
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/builder.js') }}"></script>
+<script>
+  /* ── Right Panel Toggle ── */
+  const rightPanel   = document.querySelector('.right-panel-aside');
+  const panelOverlay = document.getElementById('panel-overlay');
+  const panelCloseBtn = document.getElementById('panel-close-btn');
+
+  function toggleRightPanel() {
+    const isOpen = rightPanel.classList.contains('panel-open');
+    if (isOpen) closeRightPanel();
+    else openRightPanel();
+  }
+  function openRightPanel() {
+    rightPanel.classList.add('panel-open');
+    panelOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeRightPanel() {
+    rightPanel.classList.remove('panel-open');
+    panelOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  if (panelOverlay) panelOverlay.addEventListener('click', closeRightPanel);
+  if (panelCloseBtn) panelCloseBtn.addEventListener('click', closeRightPanel);
+
+  /* ── Mobile sidebar close helper (used by mobile nav tabs) ── */
+  function closeMobileSidebar() {
+    const drawer  = document.getElementById('sidebar-drawer');
+    const overlay = document.getElementById('sidebar-overlay');
+    drawer.classList.remove('open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  /* ── Override updateATSRing for correct circumference ──
+     r=38, circumference = 2*π*38 ≈ 238.76 */
+  window._atsCircumference = 238.76;
+</script>
 {% endblock %}

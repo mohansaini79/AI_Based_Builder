@@ -2,23 +2,21 @@
 {% block title %}Create Account – ResumeAI{% endblock %}
 
 {% block body %}
-<div class="min-h-screen hero-gradient flex items-center justify-center px-4 py-12">
-  <div class="glow-dot w-72 h-72 bg-indigo-600/20 top-10 right-10 fixed"></div>
-  <div class="glow-dot w-60 h-60 bg-purple-600/15 bottom-10 left-10 fixed"></div>
+<div class="min-h-screen hero-gradient flex items-center justify-center px-4 py-10">
+  <div class="glow-dot w-72 h-72 bg-indigo-600/20 top-10 right-10 fixed pointer-events-none"></div>
+  <div class="glow-dot w-60 h-60 bg-purple-600/15 bottom-10 left-10 fixed pointer-events-none"></div>
 
   <div class="w-full max-w-md relative z-10 animate-slide-up">
-    <!-- Logo -->
     <div class="text-center mb-8">
       <a href="/" class="inline-flex items-center gap-2 font-bold text-2xl">
-        <span class="text-3xl">⚡</span>
+        <i class="fa-solid fa-bolt text-yellow-400 text-3xl"></i>
         <span class="gradient-text-brand">ResumeAI</span>
       </a>
       <h1 class="text-2xl font-bold mt-6 mb-1 text-white">Create your account</h1>
       <p class="text-gray-400 text-sm">Start building smarter resumes today</p>
     </div>
 
-    <!-- Card -->
-    <div class="glass-card p-8">
+    <div class="glass-card p-6 sm:p-8">
       <!-- Google OAuth -->
       <a href="/auth/google" id="google-register-btn"
          class="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-200 font-medium text-sm text-gray-200 mb-6">
@@ -39,23 +37,32 @@
 
       <form id="register-form" method="POST" action="/register" class="space-y-4">
         <div>
-          <label class="form-label" for="name">Full name</label>
+          <label class="form-label" for="name">
+            <i class="fa-solid fa-user text-gray-500 mr-1"></i> Full name
+          </label>
           <input id="name" name="name" type="text" required autocomplete="name"
                  class="form-input" placeholder="Jane Smith" />
         </div>
         <div>
-          <label class="form-label" for="email">Email address</label>
+          <label class="form-label" for="email">
+            <i class="fa-solid fa-envelope text-gray-500 mr-1"></i> Email address
+          </label>
           <input id="email" name="email" type="email" required autocomplete="email"
                  class="form-input" placeholder="jane@example.com" />
         </div>
         <div>
-          <label class="form-label" for="password">Password <span class="text-gray-600">(min 6 chars)</span></label>
+          <label class="form-label" for="password">
+            <i class="fa-solid fa-lock text-gray-500 mr-1"></i> Password
+            <span class="text-gray-600">(min 6 chars)</span>
+          </label>
           <div class="relative">
             <input id="password" name="password" type="password" required autocomplete="new-password"
                    minlength="6" class="form-input pr-10" placeholder="••••••••" />
             <button type="button" id="toggle-reg-pwd"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-sm"
-                    aria-label="Toggle password visibility">👁</button>
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                    aria-label="Toggle password visibility">
+              <i id="reg-pwd-icon" class="fa-solid fa-eye text-sm"></i>
+            </button>
           </div>
           <!-- Strength bar -->
           <div class="mt-2">
@@ -67,14 +74,16 @@
         </div>
 
         <button id="register-submit-btn" type="submit" class="btn-primary w-full py-3 mt-2">
-          Create Free Account
+          <i class="fa-solid fa-user-plus"></i> Create Free Account
         </button>
       </form>
     </div>
 
     <p class="text-center text-gray-500 text-sm mt-6">
       Already have an account?
-      <a href="/login" class="text-indigo-400 hover:text-indigo-300 font-medium ml-1">Sign in →</a>
+      <a href="/login" class="text-indigo-400 hover:text-indigo-300 font-medium ml-1">
+        Sign in <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
     </p>
   </div>
 </div>
@@ -82,34 +91,39 @@
 
 {% block extra_scripts %}
 <script>
-  document.getElementById('toggle-reg-pwd').addEventListener('click', function() {
-    const pwd = document.getElementById('password');
-    pwd.type = pwd.type === 'password' ? 'text' : 'password';
+  const regPwdInput = document.getElementById('password');
+  const regPwdToggle = document.getElementById('toggle-reg-pwd');
+  const regPwdIcon   = document.getElementById('reg-pwd-icon');
+
+  regPwdToggle.addEventListener('click', function () {
+    const isHidden = regPwdInput.type === 'password';
+    regPwdInput.type  = isHidden ? 'text' : 'password';
+    regPwdIcon.className = isHidden ? 'fa-solid fa-eye-slash text-sm' : 'fa-solid fa-eye text-sm';
   });
 
-  document.getElementById('password').addEventListener('input', function() {
+  regPwdInput.addEventListener('input', function () {
     const val = this.value;
     const bar = document.getElementById('pwd-strength-bar');
     const txt = document.getElementById('pwd-strength-text');
     let score = 0;
-    if (val.length >= 6) score++;
-    if (val.length >= 10) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
+    if (val.length >= 6)          score++;
+    if (val.length >= 10)         score++;
+    if (/[A-Z]/.test(val))        score++;
+    if (/[0-9]/.test(val))        score++;
     if (/[^A-Za-z0-9]/.test(val)) score++;
-    const widths  = ['0%','20%','40%','60%','80%','100%'];
-    const colors  = ['#ef4444','#f97316','#eab308','#22c55e','#10b981'];
-    const labels  = ['','Weak','Fair','Good','Strong','Very Strong'];
-    bar.style.width  = widths[score];
-    bar.style.background = `linear-gradient(90deg, ${colors[score-1] || '#ef4444'}, ${colors[Math.min(score,4)]})`;
+    const widths = ['0%','20%','40%','60%','80%','100%'];
+    const colors = ['#ef4444','#f97316','#eab308','#22c55e','#10b981'];
+    const labels = ['','Weak','Fair','Good','Strong','Very Strong'];
+    bar.style.width      = widths[score];
+    bar.style.background = `linear-gradient(90deg, ${colors[score - 1] || '#ef4444'}, ${colors[Math.min(score, 4)]})`;
     txt.textContent  = labels[score] || '';
-    txt.style.color  = colors[score-1] || '#64748b';
+    txt.style.color  = colors[score - 1] || '#64748b';
   });
 
-  document.getElementById('register-form').addEventListener('submit', function() {
+  document.getElementById('register-form').addEventListener('submit', function () {
     const btn = document.getElementById('register-submit-btn');
-    btn.innerHTML = '<div class="spinner"></div> Creating account...';
-    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account…';
+    btn.disabled  = true;
   });
 </script>
 {% endblock %}
