@@ -3,15 +3,15 @@
    ============================================================ */
 
 // ── State ─────────────────────────────────────────────────────
-let currentTemplate = 'google';
-let summaryEditor   = null;
-let skills          = [];
-let experience      = [];
-let education       = [];
-let projects        = [];
-let certifications  = [];
-let rewriteSection  = null;
-let rewriteResult   = '';
+let currentTemplate     = 'google';
+let summaryEditor       = null;
+let skills              = [];
+let experience          = [];
+let education           = [];
+let projects            = [];
+let certifications      = [];
+let activeRewriteSection = null;  // tracks which section is being rewritten
+let rewriteResult        = '';
 
 // ── Init ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
@@ -401,7 +401,7 @@ async function saveResume(silent = false) {
 
   const data = collectFormData();
   try {
-    let res, rid;
+    let res;
     if (window.RESUME_ID) {
       res = await fetch(`/api/resume/${window.RESUME_ID}`, {
         method: 'PUT',
@@ -420,9 +420,20 @@ async function saveResume(silent = false) {
         history.replaceState(null, '', `/resume/${json.resume_id}/edit`);
       }
     }
-    if (!silent && res.ok) { btn.innerHTML = '✅ Saved'; setTimeout(() => btn.innerHTML = '💾 Save', 2000); }
+    if (!silent) {
+      if (res.ok) {
+        btn.innerHTML = '✅ Saved';
+        setTimeout(() => btn.innerHTML = '💾 Save', 2000);
+      } else {
+        btn.innerHTML = '❌ Error';
+        setTimeout(() => btn.innerHTML = '💾 Save', 2500);
+      }
+    }
   } catch(e) {
-    if (!silent) { btn.innerHTML = '❌ Error'; }
+    if (!silent) {
+      btn.innerHTML = '❌ Error';
+      setTimeout(() => btn.innerHTML = '💾 Save', 2500);
+    }
   } finally {
     if (!silent) btn.disabled = false;
   }
@@ -560,11 +571,14 @@ function getScoreColor(s) {
 }
 
 // ── AI Rewrite (summary/skills) ────────────────────────────────
-async function rewriteSection(sectionName) {
-  rewriteSection = sectionName;
+async function openRewriteSection(sectionName) {
+  activeRewriteSection = sectionName;
   const overlay = document.getElementById('rewrite-overlay');
   const title   = document.getElementById('rewrite-title');
   const result  = document.getElementById('rewrite-result');
+  // Clear any stale entry-type from a previous per-entry rewrite
+  delete overlay.dataset.entryType;
+  delete overlay.dataset.entryIndex;
   title.textContent = `🤖 AI Rewrite – ${sectionName.charAt(0).toUpperCase() + sectionName.slice(1)}`;
   result.innerHTML  = '<div class="flex items-center gap-2 text-gray-400"><div class="spinner"></div> Generating...</div>';
   overlay.classList.remove('hidden');
@@ -590,7 +604,7 @@ async function rewriteSection(sectionName) {
 }
 
 async function rewriteSectionEntry(type, idx) {
-  rewriteSection = type;
+  activeRewriteSection = type;
   const overlay = document.getElementById('rewrite-overlay');
   const title   = document.getElementById('rewrite-title');
   const result  = document.getElementById('rewrite-result');
@@ -638,9 +652,9 @@ function applyRewrite() {
   } else if (type === 'projects' && !isNaN(idx)) {
     projects[idx].description = rewriteResult;
     renderProjects();
-  } else if (rewriteSection === 'summary') {
+  } else if (activeRewriteSection === 'summary') {
     if (summaryEditor) summaryEditor.root.innerHTML = rewriteResult;
-  } else if (rewriteSection === 'skills') {
+  } else if (activeRewriteSection === 'skills') {
     const newSkills = rewriteResult.split(',').map(s => s.trim()).filter(Boolean);
     skills = [...new Set([...skills, ...newSkills])];
     renderSkills();
@@ -653,8 +667,8 @@ function closeRewriteModal() {
   const overlay = document.getElementById('rewrite-overlay');
   overlay.classList.add('hidden');
   overlay.classList.remove('flex');
-  rewriteSection = null;
-  rewriteResult  = '';
+  activeRewriteSection = null;
+  rewriteResult        = '';
 }
 
 // ── Live Preview ──────────────────────────────────────────────
@@ -748,10 +762,61 @@ function generatePreviewHTML(d) {
 
 // ── PDF Export ────────────────────────────────────────────────
 async function exportPDF() {
-  // Save first
-  await saveResume(true);
-  if (window.RESUME_ID) {
-    window.open(`/resume/${window.RESUME_ID}/preview`, '_blank');
+  const btn = document.getElementById('export-pdf-btn');
+  btn.innerHTML = '<div class="spinner"></div>';
+  btn.disabled  = true;
+
+  try {
+    // Save first to persist current state
+    await saveResume(true);
+
+    // Build a clean printable HTML element from the current preview
+    const d        = collectFormData();
+    const previewEl = document.getElementById('resume-preview-inner');
+    if (!previewEl) { throw new Error('Preview not available'); }
+
+    // Clone the preview node so we can style it for PDF
+    const clone = previewEl.cloneNode(true);
+    clone.style.fontSize    = '11px';
+    clone.style.lineHeight  = '1.4';
+    clone.style.fontFamily  = 'Arial, sans-serif';
+    clone.style.color       = '#111';
+    clone.style.background  = '#fff';
+    clone.style.padding     = '24px';
+    clone.style.width       = '210mm';
+    clone.style.minHeight   = '297mm';
+
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'absolute';
+    wrapper.style.left     = '-9999px';
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    const fileName = (d.full_name || 'Resume').replace(/\s+/g, '_') + '_Resume.pdf';
+
+    await html2pdf().set({
+      margin:      [10, 10, 10, 10],
+      filename:    fileName,
+      image:       { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(clone).save();
+
+    document.body.removeChild(wrapper);
+  } catch(e) {
+    console.error('PDF export error:', e);
+    // Notify the user and fall back to opening the preview page
+    if (typeof showToast === 'function') {
+      showToast('PDF generation failed – opening preview instead.', 'warning');
+    }
+    if (window.RESUME_ID) {
+      window.open(`/resume/${window.RESUME_ID}/preview`, '_blank');
+    } else {
+      alert('Please save your resume first, then try PDF export again.');
+    }
+  } finally {
+    btn.innerHTML = '⬇ PDF';
+    btn.disabled  = false;
   }
 }
 

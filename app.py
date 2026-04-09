@@ -605,7 +605,7 @@ Resume text:
 @login_required
 def api_ats_score():
     data   = request.get_json(silent=True) or {}
-    domain = data.get("domain", "Software Engineering")
+    domain = data.get("ats_domain", data.get("domain", "Software Engineering"))
     result = compute_ats_score(data, domain)
     result["template_scores"] = compute_template_scores(data)
 
@@ -635,7 +635,7 @@ def api_ats_score():
 @login_required
 def api_ai_suggestions():
     data   = request.get_json(silent=True) or {}
-    domain = data.get("domain", "Software Engineering")
+    domain = data.get("ats_domain", data.get("domain", "Software Engineering"))
     skills = data.get("skills", [])
 
     ats    = compute_ats_score(data, domain)
