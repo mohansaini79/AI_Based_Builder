@@ -178,7 +178,7 @@
             <i class="fa-solid fa-bullseye text-orange-400"></i> ATS Domain / Target Role
           </label>
           <select id="f-ats_domain" class="form-input">
-            {% for d in ['Full Stack Web Developer'Software Engineering','Data Science','Product Management','Marketing','Finance','Healthcare','Design','DevOps'] %}
+            {% for d in ['Full Stack Web Developer','Software Engineering','Data Science','Product Management','Marketing','Finance','Healthcare','Design','DevOps'] %}
             <option value="{{ d }}" {% if resume and resume.ats_domain == d %}selected{% endif %}>{{ d }}</option>
             {% endfor %}
           </select>
