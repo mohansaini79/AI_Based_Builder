@@ -98,7 +98,7 @@ def groq_chat(messages, temperature=0.7, max_tokens=2048):
     """Call Groq API safely, return text or empty string on error."""
     try:
         resp = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="GPT-OSS-120B",
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
