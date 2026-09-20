@@ -5,6 +5,8 @@ Flask + MongoDB Atlas + Groq AI + Google OAuth
 
 import os
 import json
+import re
+import shutil
 import tempfile
 import bcrypt
 import requests
@@ -26,6 +28,12 @@ from authlib.integrations.requests_client import OAuth2Session
 
 # ── PDF / DOCX parsing ──────────────────────────────────────────────────────
 try:
+    import fitz  # PyMuPDF
+    PYMUPDF_AVAILABLE = True
+except ImportError:
+    PYMUPDF_AVAILABLE = False
+
+try:
     import PyPDF2
     PDF_AVAILABLE = True
 except ImportError:
@@ -42,6 +50,13 @@ try:
     PDFMINER_AVAILABLE = True
 except ImportError:
     PDFMINER_AVAILABLE = False
+
+try:
+    import pytesseract
+    from PIL import Image
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
 
 # ── Load environment ─────────────────────────────────────────────────────────
 load_dotenv()
@@ -94,16 +109,21 @@ GOOGLE_USERINFO_URL  = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
 # ── Helper: safe groq call ───────────────────────────────────────────────────
-def groq_chat(messages, temperature=0.7, max_tokens=2048):
-    """Call Groq API safely, return text or empty string on error."""
+def groq_chat(messages, temperature=0.7, max_tokens=2048, response_format=None):
+    """Call Groq API safely, optionally enforcing a structured response format."""
     try:
-        resp = groq_client.chat.completions.create(
-            model="GPT-OSS-120B",
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-        return resp.choices[0].message.content.strip()
+        kwargs = {
+            "model": os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if response_format is not None:
+            kwargs["response_format"] = response_format
+
+        resp = groq_client.chat.completions.create(**kwargs)
+        content = resp.choices[0].message.content or ""
+        return content.strip()
     except Exception as e:
         app.logger.error(f"Groq error: {e}")
         return ""
@@ -497,36 +517,270 @@ def upload_page():
     return render_template("upload.html")
 
 
+RESUME_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "full_name": {"type": "string"},
+        "email": {"type": "string"},
+        "phone": {"type": "string"},
+        "location": {"type": "string"},
+        "linkedin": {"type": "string"},
+        "github": {"type": "string"},
+        "website": {"type": "string"},
+        "summary": {"type": "string"},
+        "skills": {"type": "array", "items": {"type": "string"}},
+        "experience": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "company": {"type": "string"},
+                    "duration": {"type": "string"},
+                    "location": {"type": "string"},
+                    "description": {"type": "string"}
+                },
+                "required": ["title", "company", "duration", "location", "description"],
+                "additionalProperties": False
+            }
+        },
+        "education": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "degree": {"type": "string"},
+                    "institution": {"type": "string"},
+                    "year": {"type": "string"},
+                    "gpa": {"type": "string"}
+                },
+                "required": ["degree", "institution", "year", "gpa"],
+                "additionalProperties": False
+            }
+        },
+        "projects": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "technologies": {"type": "string"},
+                    "description": {"type": "string"},
+                    "link": {"type": "string"}
+                },
+                "required": ["title", "technologies", "description", "link"],
+                "additionalProperties": False
+            }
+        },
+        "certifications": {"type": "array", "items": {"type": "string"}}
+    },
+    "required": [
+        "full_name", "email", "phone", "location", "linkedin", "github",
+        "website", "summary", "skills", "experience", "education",
+        "projects", "certifications"
+    ],
+    "additionalProperties": False
+}
+
+RESUME_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "resume_parser",
+        "strict": True,
+        "schema": RESUME_SCHEMA
+    }
+}
+
+
+def clean_extracted_text(text):
+    """Normalize extracted resume text while preserving useful section structure."""
+    if not text:
+        return ""
+    text = text.replace("\x00", " ")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
 def extract_text_from_pdf(path):
-    """Extract text from PDF using pdfminer or PyPDF2 fallback."""
-    text = ""
-    if PDFMINER_AVAILABLE:
+    """Extract all usable PDF text, with OCR fallback for scanned/image PDFs."""
+    page_texts = []
+
+    # PyMuPDF gives better page/block ordering than the legacy parsers.
+    if PYMUPDF_AVAILABLE:
         try:
-            text = pdfminer_extract(path)
-            if text and text.strip():
-                return text
-        except Exception:
-            pass
-    if PDF_AVAILABLE:
+            doc = fitz.open(path)
+            for page in doc:
+                blocks = page.get_text("blocks")
+                if blocks:
+                    ordered = sorted(blocks, key=lambda b: (round(b[1], 1), round(b[0], 1)))
+                    page_text = "\n".join(
+                        str(block[4]).strip() for block in ordered
+                        if len(block) >= 5 and str(block[4]).strip()
+                    )
+                else:
+                    page_text = page.get_text("text") or ""
+                page_texts.append(page_text)
+            doc.close()
+        except Exception as e:
+            app.logger.warning(f"PyMuPDF extraction failed: {e}")
+
+    text = clean_extracted_text("\n\n".join(page_texts))
+    compact_len = len(re.sub(r"\s+", "", text))
+
+    # Scanned PDFs often have almost no embedded text. OCR only when needed.
+    if compact_len < 120 and OCR_AVAILABLE and shutil.which("tesseract"):
+        try:
+            doc = fitz.open(path) if PYMUPDF_AVAILABLE else None
+            if doc is not None:
+                ocr_pages = []
+                for page in doc:
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    ocr_pages.append(pytesseract.image_to_string(img))
+                doc.close()
+                ocr_text = clean_extracted_text("\n\n".join(ocr_pages))
+                if len(re.sub(r"\s+", "", ocr_text)) > compact_len:
+                    text = ocr_text
+        except Exception as e:
+            app.logger.warning(f"PDF OCR failed: {e}")
+
+    # Legacy fallbacks.
+    if len(re.sub(r"\s+", "", text)) < 120 and PDFMINER_AVAILABLE:
+        try:
+            fallback = clean_extracted_text(pdfminer_extract(path) or "")
+            if len(re.sub(r"\s+", "", fallback)) > len(re.sub(r"\s+", "", text)):
+                text = fallback
+        except Exception as e:
+            app.logger.warning(f"pdfminer extraction failed: {e}")
+
+    if len(re.sub(r"\s+", "", text)) < 120 and PDF_AVAILABLE:
         try:
             with open(path, "rb") as f:
                 reader = PyPDF2.PdfReader(f)
-                for page in reader.pages:
-                    text += (page.extract_text() or "") + "\n"
-        except Exception:
-            pass
+                fallback = clean_extracted_text(
+                    "\n".join((page.extract_text() or "") for page in reader.pages)
+                )
+            if len(re.sub(r"\s+", "", fallback)) > len(re.sub(r"\s+", "", text)):
+                text = fallback
+        except Exception as e:
+            app.logger.warning(f"PyPDF2 extraction failed: {e}")
+
     return text
 
 
 def extract_text_from_docx(path):
-    """Extract text from DOCX."""
+    """Extract DOCX paragraphs plus table content."""
     if not DOCX_AVAILABLE:
         return ""
+
     try:
         doc = DocxDocument(path)
-        return "\n".join([p.text for p in doc.paragraphs])
-    except Exception:
+        parts = []
+
+        for p in doc.paragraphs:
+            value = p.text.strip()
+            if value:
+                parts.append(value)
+
+        for table in doc.tables:
+            for row in table.rows:
+                cells = []
+                for cell in row.cells:
+                    value = " ".join(cell.text.split()).strip()
+                    if value:
+                        cells.append(value)
+                if cells:
+                    parts.append(" | ".join(cells))
+
+        return clean_extracted_text("\n".join(parts))
+    except Exception as e:
+        app.logger.error(f"DOCX extraction failed: {e}")
         return ""
+
+
+def _to_text(value):
+    """Coerce model values to the string types expected by the builder."""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, list):
+        return "\n".join(str(item).strip() for item in value if str(item).strip())
+    return str(value).strip()
+
+
+def normalize_resume_data(data):
+    """Normalize structured AI output before returning it to the frontend."""
+    if not isinstance(data, dict):
+        return {
+            "full_name": "", "email": "", "phone": "", "location": "",
+            "linkedin": "", "github": "", "website": "", "summary": "",
+            "skills": [], "experience": [], "education": [],
+            "projects": [], "certifications": []
+        }
+
+    normalized = {
+        "full_name": _to_text(data.get("full_name")),
+        "email": _to_text(data.get("email")),
+        "phone": _to_text(data.get("phone")),
+        "location": _to_text(data.get("location")),
+        "linkedin": _to_text(data.get("linkedin")),
+        "github": _to_text(data.get("github")),
+        "website": _to_text(data.get("website")),
+        "summary": _to_text(data.get("summary")),
+        "skills": [],
+        "experience": [],
+        "education": [],
+        "projects": [],
+        "certifications": [],
+    }
+
+    skills = data.get("skills", [])
+    if isinstance(skills, list):
+        normalized["skills"] = list(dict.fromkeys(
+            _to_text(item) for item in skills if _to_text(item)
+        ))
+
+    for item in data.get("experience", []) if isinstance(data.get("experience"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        normalized["experience"].append({
+            "title": _to_text(item.get("title")),
+            "company": _to_text(item.get("company")),
+            "duration": _to_text(item.get("duration")),
+            "location": _to_text(item.get("location")),
+            "description": _to_text(item.get("description")),
+        })
+
+    for item in data.get("education", []) if isinstance(data.get("education"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        normalized["education"].append({
+            "degree": _to_text(item.get("degree")),
+            "institution": _to_text(item.get("institution")),
+            "year": _to_text(item.get("year")),
+            "gpa": _to_text(item.get("gpa")),
+        })
+
+    for item in data.get("projects", []) if isinstance(data.get("projects"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        normalized["projects"].append({
+            "title": _to_text(item.get("title")),
+            "technologies": _to_text(item.get("technologies")),
+            "description": _to_text(item.get("description")),
+            "link": _to_text(item.get("link")),
+        })
+
+    certifications = data.get("certifications", [])
+    if isinstance(certifications, list):
+        normalized["certifications"] = list(dict.fromkeys(
+            _to_text(item) for item in certifications if _to_text(item)
+        ))
+
+    return normalized
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -534,6 +788,7 @@ def extract_text_from_docx(path):
 def api_upload_resume():
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
+
     file = request.files["file"]
     if not file.filename:
         return jsonify({"error": "Empty filename"}), 400
@@ -542,87 +797,79 @@ def api_upload_resume():
     if ext not in [".pdf", ".docx"]:
         return jsonify({"error": "Only PDF and DOCX files are supported"}), 400
 
-    suffix  = ext
-    tmp_dir = tempfile.gettempdir()
-    user_id_safe = str(session["user_id"]).replace("/", "_")
-    tmp_path = os.path.join(tmp_dir, f"resume_upload_{user_id_safe}{suffix}")
+    # Keep uploads isolated per request to avoid concurrent-user collisions.
+    suffix = ext
+    tmp_path = None
     try:
-        file.save(tmp_path)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, prefix="resume_upload_") as tmp:
+            tmp_path = tmp.name
+            file.save(tmp_path)
+
         if ext == ".pdf":
             raw_text = extract_text_from_pdf(tmp_path)
         else:
             raw_text = extract_text_from_docx(tmp_path)
     finally:
-        try:
-            os.remove(tmp_path)
-        except Exception:
-            pass
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
-    if not raw_text or not raw_text.strip():
-        return jsonify({"error": "Could not extract text from file"}), 422
+    raw_text = clean_extracted_text(raw_text)
+    if not raw_text:
+        return jsonify({
+            "error": (
+                "Could not extract readable text from this file. "
+                "For scanned/image-only PDFs, enable Tesseract OCR on the server."
+            )
+        }), 422
 
-    prompt = f"""You are a resume parser. Extract information from the following resume text and return ONLY valid JSON (no markdown, no explanation).
+    # GPT-OSS 120B supports a 131K context window. Keep a generous safety cap
+    # so unusually large uploads cannot consume the entire request budget.
+    resume_text = raw_text[:60000]
 
-The JSON must have exactly these fields:
-{{
-  "full_name": "string",
-  "email": "string",
-  "phone": "string",
-  "location": "string",
-  "linkedin": "string",
-  "github": "string",
-  "website": "string",
-  "summary": "string",
-  "skills": ["skill1", "skill2"],
-  "experience": [
-    {{
-      "title": "string",
-      "company": "string",
-      "duration": "string",
-      "location": "string",
-      "description": "string"
-    }}
-  ],
-  "education": [
-    {{
-      "degree": "string",
-      "institution": "string",
-      "year": "string",
-      "gpa": "string"
-    }}
-  ],
-  "projects": [
-    {{
-      "title": "string",
-      "technologies": "string",
-      "description": "string",
-      "link": "string"
-    }}
-  ],
-  "certifications": ["cert1", "cert2"]
-}}
+    prompt = f"""Extract the candidate information from the resume text below.
 
-Use empty strings or empty arrays for missing fields. Do not add any extra fields.
+Rules:
+- Use ONLY information explicitly present in the resume.
+- Never invent employers, dates, degrees, skills, links, metrics, or credentials.
+- Preserve all relevant work experiences, education entries, projects, and certifications found in the text.
+- Keep each experience/project as a separate array item.
+- If a field is missing, return an empty string or empty array.
+- Return every required field exactly as defined by the schema.
 
 Resume text:
-{raw_text[:4000]}"""
+{resume_text}"""
 
-    parsed_text = groq_chat([{"role": "user", "content": prompt}], temperature=0.1, max_tokens=2000)
+    parsed_text = groq_chat(
+        [
+            {
+                "role": "system",
+                "content": (
+                    "You are a high-precision resume information extraction system. "
+                    "Extract structured facts faithfully. Do not summarize away important entries."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0,
+        max_tokens=5000,
+        response_format=RESUME_RESPONSE_FORMAT,
+    )
+
+    if not parsed_text:
+        return jsonify({
+            "error": "AI parsing failed. Please try again or check the GROQ_MODEL/GROQ_API_KEY configuration."
+        }), 502
 
     try:
-        cleaned = parsed_text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("```")[1]
-            if cleaned.startswith("json"):
-                cleaned = cleaned[4:]
-        parsed = json.loads(cleaned.strip())
-    except Exception:
-        parsed = {
-            "full_name": "", "email": "", "phone": "", "location": "",
-            "linkedin": "", "github": "", "website": "", "summary": raw_text[:500],
-            "skills": [], "experience": [], "education": [],
-            "projects": [], "certifications": []
-        }
+        parsed = normalize_resume_data(json.loads(parsed_text))
+    except Exception as e:
+        app.logger.error(f"Resume JSON parsing failed: {e}")
+        return jsonify({
+            "error": "The AI returned an invalid resume structure. Please try again."
+        }), 502
 
     return jsonify({"success": True, "data": parsed}), 200
 
